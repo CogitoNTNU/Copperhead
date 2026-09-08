@@ -5,7 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 license-files = ["LICENSE"]
-dependencies = []
+dependencies = [
+    "pandas>=3.0.5",
+    "scikit-learn>=1.9.0",
+    "wandb>=0.29.0",
+]
 
 
 [dependency-groups]
