@@ -1,0 +1,51 @@
+_wandb:
+    value:
+        cli_version: 0.29.0
+        e:
+            do1mlyst7xpvafb2k8qpb98coel27l6a:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 7
+                    macModel: MacBookAir10,1
+                    memoryGb: 8
+                    name: Apple M1
+                    pcpuCores: 4
+                    ramTotalBytes: "8589934592"
+                    swapTotalBytes: "4294967296"
+                cpu_count: 8
+                cpu_count_logical: 8
+                disk:
+                    /:
+                        total: "245107195904"
+                        used: "226756530176"
+                email: kristian.flatval@gmail.com
+                executable: /Users/kristianflatval/dev/cogito/copperhead/.venv/bin/python3
+                git:
+                    commit: b4717cf059d3673631836d4d48747b687ca62346
+                    remote: https://github.com/CogitoNTNU/Copperhead.git
+                host: trd.local
+                memory:
+                    total: "8589934592"
+                os: macOS-26.5.2-arm64-arm-64bit
+                program: -m src.nn.kristian.run_kristian
+                python: CPython 3.12.11
+                root: /Users/kristianflatval/dev/cogito/copperhead
+                startedAt: "2026-09-09T15:53:02.322376Z"
+                writerId: do1mlyst7xpvafb2k8qpb98coel27l6a
+        m: []
+        python_version: 3.12.11
+        t:
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.11
+            "5": 0.29.0
+            "12": 0.29.0
+            "13": darwin-arm64
+batch_size:
+    value: 64
+epochs:
+    value: 5
+lr:
+    value: 0.1
