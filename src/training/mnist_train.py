@@ -1,6 +1,6 @@
 import numpy as np
-import wandb
 
+import wandb
 from src.data.mnist_loader import load_mnist
 
 

@@ -1,6 +1,6 @@
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 
 cache_path = Path(__file__).resolve().parents[2] / "data" / "mnist.npz"
 

@@ -2,7 +2,7 @@ import numpy as np
 
 
 class KristianNN:
-    def __init__(self, input_dim=784, hidden_dim=4, output_dim=10, seed=0):
+    def __init__(self, input_dim=784, _hidden_dim=4, output_dim=10, seed=0):
         rng = np.random.default_rng(seed)
 
         self.W = rng.standard_normal((input_dim, output_dim)) * 0.01
