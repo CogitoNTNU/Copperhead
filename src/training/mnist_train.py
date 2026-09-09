@@ -2,7 +2,6 @@ import numpy as np
 
 import wandb
 from src.data.mnist_loader import load_mnist
-from src.nn.kristian import skeleton_nn  # bytte dette i deres trening
 
 
 def softmax_cross_entropy_loss(logits, y_true):
@@ -29,11 +28,6 @@ def accuracy(logits, y_true):
     return (preds == y_true).mean()
 
 
-def sgd_step(params, lr):
-    for param, grad in params:
-        param -= lr * grad
-
-
 def iterate_batches(X, y, batch_size, rng):
     n = len(X)
     perm = rng.permutation(n)
@@ -42,15 +36,22 @@ def iterate_batches(X, y, batch_size, rng):
         yield X[idx], y[idx]
 
 
-def train(epochs=5, batch_size=64, lr=0.1, seed=0, engine_name="kristian"):
+def train(
+    nn,
+    optimizer,
+    epochs=5,
+    batch_size=64,
+    seed=0,
+    engine_name="kristian",
+):
     # logge i wandb initalisering
     wandb.init(
         project="copperhead-mnist",
-        name=f"{engine_name}-lr{lr}-bs{batch_size}",
+        name=engine_name,
         config={
             "epochs": epochs,
             "batch_size": batch_size,
-            "lr": lr,
+            "lr": optimizer.learning_rate,
         },
     )
 
@@ -58,22 +59,27 @@ def train(epochs=5, batch_size=64, lr=0.1, seed=0, engine_name="kristian"):
     X_train, y_train, X_val, y_val = load_mnist(seed=seed)
     rng = np.random.default_rng(seed)
 
-    nn = skeleton_nn.SkeletonNN()
-
     for epoch in range(1, epochs + 1):
         epoch_losses = []
         for x_batch, y_batch in iterate_batches(X_train, y_train, batch_size, rng):
             logits = nn.forward(x_batch)
             loss, grad_loss = softmax_cross_entropy_loss(logits, y_batch)
             nn.backward(grad_loss)
-            sgd_step(nn.params(), lr)
+            optimizer.step(nn.params())
             epoch_losses.append(loss)
 
         val_logits = nn.forward(X_val)
         val_acc = accuracy(val_logits, y_val)
         train_loss = np.mean(epoch_losses)
 
-        wandb.log({"train_loss": train_loss, "val_acc": val_acc, "epoch": epoch})
+        wandb.log(
+            {
+                "train_loss": train_loss,
+                "learning_rate": optimizer.learning_rate,
+                "val_acc": val_acc,
+                "epoch": epoch,
+            }
+        )
 
         print(
             f"epoch {epoch} av {epochs}"
@@ -83,7 +89,3 @@ def train(epochs=5, batch_size=64, lr=0.1, seed=0, engine_name="kristian"):
 
     wandb.finish()
     return nn
-
-
-if __name__ == "__main__":
-    train()

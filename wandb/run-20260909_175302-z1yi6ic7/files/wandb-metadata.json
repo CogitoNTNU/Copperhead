@@ -1,0 +1,36 @@
+{
+  "os":  "macOS-26.5.2-arm64-arm-64bit",
+  "python":  "CPython 3.12.11",
+  "startedAt":  "2026-09-09T15:53:02.322376Z",
+  "program":  "-m src.nn.kristian.run_kristian",
+  "git":  {
+    "remote":  "https://github.com/CogitoNTNU/Copperhead.git",
+    "commit":  "b4717cf059d3673631836d4d48747b687ca62346"
+  },
+  "email":  "kristian.flatval@gmail.com",
+  "root":  "/Users/kristianflatval/dev/cogito/copperhead",
+  "host":  "trd.local",
+  "executable":  "/Users/kristianflatval/dev/cogito/copperhead/.venv/bin/python3",
+  "cpu_count":  8,
+  "cpu_count_logical":  8,
+  "disk":  {
+    "/":  {
+      "total":  "245107195904",
+      "used":  "226756530176"
+    }
+  },
+  "memory":  {
+    "total":  "8589934592"
+  },
+  "apple":  {
+    "name":  "Apple M1",
+    "ecpuCores":  4,
+    "pcpuCores":  4,
+    "gpuCores":  7,
+    "memoryGb":  8,
+    "swapTotalBytes":  "4294967296",
+    "ramTotalBytes":  "8589934592",
+    "macModel":  "MacBookAir10,1"
+  },
+  "writerId":  "do1mlyst7xpvafb2k8qpb98coel27l6a"
+}
