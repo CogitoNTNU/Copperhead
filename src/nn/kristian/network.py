@@ -8,12 +8,6 @@ class KristianNN:
         self.W = rng.standard_normal((input_dim, output_dim)) * 0.01
         self.b = np.zeros(output_dim)
 
-        self.x = None
-        self.Y = None
-
-        self.grad_W = None
-        self.grad_b = None
-
     def forward(self, x):
         self.x = x
         return (self.x @ self.W) + self.b
