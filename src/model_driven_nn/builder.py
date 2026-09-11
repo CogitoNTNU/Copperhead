@@ -9,7 +9,7 @@ type BuildResult = tuple[Component, int]
 
 class Builder:
     def build(self, spec: ArchitectureSpec, input_dim: int) -> BuildResult:
-        method_name = "build_" + cast(str, spec["type"])
+        method_name = "build_" + cast(str, spec.get("type"))
         builder = getattr(self, method_name, self.generic_build)
         return builder(spec, input_dim)
 
