@@ -1,9 +1,9 @@
 import numpy as np
 
-from src.nn.initial.activators.activator import ActivatorBC
+from src.nn.initial.activators.activator import Activator
 
 
-class ReLU(ActivatorBC):
+class ReLU(Activator):
     def __init__(self):
         super().__init__("ReLU")
         self.mask = None
