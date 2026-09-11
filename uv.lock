@@ -741,6 +741,7 @@ version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
     { name = "pandas" },
+    { name = "pyyaml" },
     { name = "scikit-learn" },
     { name = "wandb" },
 ]
@@ -764,6 +765,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "pandas", specifier = ">=3.0.5" },
+    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
     { name = "wandb", specifier = ">=0.29.0" },
 ]
