@@ -3,10 +3,10 @@ from collections.abc import Iterable
 import numpy as np
 
 from ..types import FloatArray, ParameterPair
-from .base import Component
+from .base import Component, Structure
 
 
-class Concat(Component):
+class Concat(Structure):
     def __init__(
         self, branches: Iterable[Component], output_dims: list[int] | None = None
     ) -> None:

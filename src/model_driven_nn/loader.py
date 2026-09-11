@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from .builder import ArchitectureSpec, Builder
-from .components import Sequential
+from .components import Structure
 from .network import Network
 
 
@@ -33,12 +33,9 @@ class Loader:
         model_spec = self._validate_mapping(
             architecture.get("model"), "Architecture model"
         )
-        if model_spec.get("type") != "sequential":
-            raise ValueError("Architecture model type must be 'sequential'")
-
         model, actual_output_dim = self.builder.build(model_spec, input_dim)
-        if not isinstance(model, Sequential):
-            raise TypeError("Architecture model must build a Sequential component")
+        if not isinstance(model, Structure):
+            raise TypeError("Architecture model must build a Structure component")
         if expected_output is not None and actual_output_dim != expected_output:
             raise ValueError(
                 f"Architecture declares output_dim={expected_output}, "

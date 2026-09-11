@@ -1,13 +1,13 @@
-from .components import Sequential
+from .components import Structure
 from .types import FloatArray, ParameterPair
 
 
 class Network:
     def __init__(
-        self, name: str, model: Sequential, input_dim: int, output_dim: int
+        self, name: str, model: Structure, input_dim: int, output_dim: int
     ) -> None:
         self.name: str = name
-        self.model: Sequential = model
+        self.model: Structure = model
         self.input_dim: int = input_dim
         self.output_dim: int = output_dim
 

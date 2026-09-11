@@ -22,3 +22,7 @@ class Layer(Component, ABC):
 
 class Activation(Component, ABC):
     """Marker base class for activations."""
+
+
+class Structure(Component, ABC):
+    """Marker base class for model structures."""

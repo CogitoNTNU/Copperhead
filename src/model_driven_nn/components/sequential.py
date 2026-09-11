@@ -1,10 +1,10 @@
 from collections.abc import Iterable
 
 from ..types import FloatArray, ParameterPair
-from .base import Component
+from .base import Component, Structure
 
 
-class Sequential(Component):
+class Sequential(Structure):
     def __init__(self, components: Iterable[Component]) -> None:
         self.components: list[Component] = list(components)
 
