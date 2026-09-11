@@ -1,28 +1,34 @@
 import numpy as np
 
+from ..types import FloatArray, ParameterPair
 from .base import Layer
 
 
 class Linear(Layer):
     def __init__(self, input_dim: int, output_dim: int) -> None:
-        self.grad_b = None
-        self.grad_W = None
-        self.Y = None
-        self.x = None
-        self.W = np.random.randn(input_dim, output_dim)
-        self.b = np.zeros(output_dim)
+        self.W: FloatArray = np.random.randn(input_dim, output_dim)
+        self.b: FloatArray = np.zeros(output_dim)
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+        self.grad_W: FloatArray = np.zeros_like(self.W)
+        self.grad_b: FloatArray = np.zeros_like(self.b)
+
+        self.Y: FloatArray | None = None
+        self.x: FloatArray | None = None
+
+    def forward(self, x: FloatArray) -> FloatArray:
         self.x = x
         self.Y = np.dot(x, self.W) + self.b
         return self.Y
 
-    def backward(self, d_y: np.ndarray) -> np.ndarray:
+    def backward(self, d_y: FloatArray) -> FloatArray:
         if self.x is None:
             raise RuntimeError("Linear.backward() called before forward()")
         self.grad_W = self.x.T @ d_y
         self.grad_b = np.sum(d_y, axis=0)
         return d_y @ self.W.T
 
-    def params(self):
-        return [(self.W, self.grad_W), (self.b, self.grad_b)]
+    def params(self) -> list[ParameterPair]:
+        return [
+            (self.W, self.grad_W),
+            (self.b, self.grad_b),
+        ]

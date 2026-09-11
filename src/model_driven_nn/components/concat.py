@@ -1,15 +1,22 @@
+from collections.abc import Iterable
+
 import numpy as np
 
+from ..types import FloatArray, ParameterPair
 from .base import Component
 
 
 class Concat(Component):
-    def __init__(self, branches, output_dims=None) -> None:
-        self.branches = list(branches)
-        self.output_dims = list(output_dims) if output_dims is not None else None
-        self._branch_output_dims = None
+    def __init__(
+        self, branches: Iterable[Component], output_dims: list[int] | None = None
+    ) -> None:
+        self.branches: list[Component] = list(branches)
+        self.output_dims: list[int] | None = (
+            list(output_dims) if output_dims is not None else None
+        )
+        self._branch_output_dims: list[int] | None = None
 
-    def forward(self, x):
+    def forward(self, x: FloatArray) -> FloatArray:
         outputs = [branch.forward(x) for branch in self.branches]
         self._branch_output_dims = [output.shape[-1] for output in outputs]
         if (
@@ -21,7 +28,7 @@ class Concat(Component):
             )
         return np.concatenate(outputs, axis=-1)
 
-    def backward(self, d_y):
+    def backward(self, d_y: FloatArray) -> FloatArray:
         if self._branch_output_dims is None:
             raise RuntimeError("Concat.backward() called before forward()")
         splits = np.cumsum(self._branch_output_dims[:-1])
@@ -32,5 +39,5 @@ class Concat(Component):
         ]
         return np.sum(input_gradients, axis=0)
 
-    def params(self):
+    def params(self) -> list[ParameterPair]:
         return [parameter for branch in self.branches for parameter in branch.params()]
