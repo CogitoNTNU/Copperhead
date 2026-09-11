@@ -1,17 +1,16 @@
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from typing import Never, cast
 
 from .components import Component, Concat, Linear, ReLU, Sequential
 
 type ArchitectureSpec = Mapping[str, object]
 type BuildResult = tuple[Component, int]
-type BuilderCallable = Callable[[ArchitectureSpec, int], BuildResult]
 
 
 class Builder:
     def build(self, spec: ArchitectureSpec, input_dim: int) -> BuildResult:
         method_name = "build_" + cast(str, spec["type"])
-        builder = cast(BuilderCallable, getattr(self, method_name, self.generic_build))
+        builder = getattr(self, method_name, self.generic_build)
         return builder(spec, input_dim)
 
     @staticmethod
@@ -78,6 +77,6 @@ class Builder:
             if not all(isinstance(k, str) for k in child):
                 raise TypeError(f"'{key}[{index}]' must have string keys")
 
-            children.append(cast(ArchitectureSpec, child))
+            children.append(child)
 
         return children
