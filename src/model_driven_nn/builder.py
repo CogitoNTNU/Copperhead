@@ -1,15 +1,15 @@
-from collections.abc import Mapping
 from typing import Never
 
+from .common import positive_int, validate_mapping
 from .components import Component, Concat, Linear, ReLU, Sequential
+from .types import ArchitectureSpec
 
-type ArchitectureSpec = Mapping[str, object]
 type BuildResult = tuple[Component, int]
 
 
 class Builder:
     def build(self, spec: ArchitectureSpec, input_dim: int) -> BuildResult:
-        self._validate_mapping(spec, "Component")
+        validate_mapping(spec, "Component")
         component_type = spec.get("type")
         if not isinstance(component_type, str):
             raise TypeError("Component requires a string 'type'")
@@ -31,10 +31,9 @@ class Builder:
     def build_relu(_spec: ArchitectureSpec, input_dim: int) -> tuple[ReLU, int]:
         return ReLU(), input_dim
 
-    def build_linear(
-        self, spec: ArchitectureSpec, input_dim: int
-    ) -> tuple[Linear, int]:
-        output_dim = self._positive_int(spec.get("output_dim"), "Linear output_dim")
+    @staticmethod
+    def build_linear(spec: ArchitectureSpec, input_dim: int) -> tuple[Linear, int]:
+        output_dim = positive_int(spec.get("output_dim"), "Linear output_dim")
         return Linear(input_dim, output_dim), output_dim
 
     def build_sequential(
@@ -63,20 +62,6 @@ class Builder:
         return Concat(branches, output_dims), sum(output_dims)
 
     @staticmethod
-    def _positive_int(value: object, name: str) -> int:
-        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-            raise ValueError(f"{name} must be a positive integer")
-        return value
-
-    @staticmethod
-    def _validate_mapping(value: object, name: str) -> ArchitectureSpec:
-        if not isinstance(value, Mapping):
-            raise TypeError(f"{name} must be a YAML mapping")
-        if not all(isinstance(key, str) for key in value):
-            raise TypeError(f"{name} keys must be strings")
-        return value
-
-    @staticmethod
     def _children(spec: ArchitectureSpec, key: str) -> list[ArchitectureSpec]:
         value = spec.get(key)
         if not isinstance(value, list) or not value:
@@ -85,6 +70,6 @@ class Builder:
         children: list[ArchitectureSpec] = []
 
         for index, child in enumerate(value):
-            children.append(Builder._validate_mapping(child, f"'{key}[{index}]'"))
+            children.append(validate_mapping(child, f"'{key}[{index}]'"))
 
         return children
