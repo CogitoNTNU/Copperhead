@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from .types import ArchitectureSpec
+from .types import YamlMapping
 
 
 def positive_int(value: object, name: str) -> int:
@@ -9,7 +9,7 @@ def positive_int(value: object, name: str) -> int:
     return value
 
 
-def validate_mapping(value: object, name: str) -> ArchitectureSpec:
+def validate_mapping(value: object, name: str) -> YamlMapping:
     if not isinstance(value, Mapping):
         raise TypeError(f"{name} must be a YAML mapping")
     if not all(isinstance(key, str) for key in value):
