@@ -1,0 +1,17 @@
+name: mnist_classifier
+input_dim: 784
+config:
+  hidden_dim: 128
+  classes: 10
+output_dim: ${classes}
+
+model:
+  type: sequential
+  layers:
+    - include: blocks/encoder.yaml
+      config:
+        hidden_dim: 128
+
+    - type: relu
+    - type: linear
+      output_dim: ${classes}

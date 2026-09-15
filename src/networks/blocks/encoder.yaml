@@ -1,0 +1,30 @@
+config:
+  hidden_dim: 64
+
+type: concat
+paths:
+  - type: sequential
+    layers:
+      - type: linear
+        output_dim: ${hidden_dim}
+      - type: relu
+      - type: linear
+        output_dim: ${hidden_dim}
+  - type: linear
+    output_dim: ${hidden_dim}
+#  - type: sequential
+#    layers:
+#      - type: linear
+#        output_dim: ${hidden_dim}
+#      - type: relu
+#      - type: concat
+#        paths:
+#          - type: linear
+#            output_dim: ${hidden_dim}
+#          - type: sequential
+#            layers:
+#              - type: linear
+#                output_dim: ${hidden_dim}
+#              - type: relu
+#              - type: linear
+#                output_dim: ${hidden_dim}
