@@ -10,6 +10,7 @@ def main():
     train(
         nn=network,
         optimizer=optimizer,
+        epochs=30,
         engine_name="kristian",
     )
 

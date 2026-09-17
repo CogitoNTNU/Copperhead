@@ -59,6 +59,8 @@ def train(
     X_train, y_train, X_val, y_val = load_mnist(seed=seed)
     rng = np.random.default_rng(seed)
 
+    avg_accuracy = 0
+
     for epoch in range(1, epochs + 1):
         epoch_losses = []
         for x_batch, y_batch in iterate_batches(X_train, y_train, batch_size, rng):
@@ -72,6 +74,7 @@ def train(
         val_acc = accuracy(val_logits, y_val)
         train_loss = np.mean(epoch_losses)
 
+        avg_accuracy += val_acc
         wandb.log(
             {
                 "train_loss": train_loss,
@@ -82,10 +85,11 @@ def train(
         )
 
         print(
-            f"epoch {epoch} av {epochs}"
-            f"trenings loss = {train_loss:.4f}"
-            f"accuracy = {val_acc:.4f}"
+            f"epoch {epoch} av {epochs}; "
+            f"trenings loss = {train_loss:.4f}; "
+            f"accuracy = {val_acc:.4f} "
         )
-
+    print("\nAverage Accuracy: "  + str(avg_accuracy/epochs))
+    
     wandb.finish()
     return nn
