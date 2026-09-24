@@ -1,5 +1,5 @@
 import numpy as np
-from src.nn.kristian.module import Parameter, Module
+from src.nn.frederik.module import Parameter, Module
 from src.nn.frederik.init import default_init
 
 

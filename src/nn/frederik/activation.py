@@ -1,5 +1,5 @@
 import numpy as np
-from src.nn.kristian.module import Module
+from src.nn.frederik.module import Module
 
 
 class ReLU(Module):

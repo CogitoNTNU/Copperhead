@@ -1,9 +1,9 @@
 import numpy as np
 
-from src.nn.kristian.model import Sequential
-from src.nn.kristian.linear import Linear
+from src.nn.frederik.model import Sequential
+from src.nn.frederik.linear import Linear
 from src.nn.frederik.activation import ReLU
-from src.nn.kristian.loss import MSE_loss
+from src.nn.frederik.loss import MSE_loss
 from src.nn.kristian.optimizer import SGD
 
 
