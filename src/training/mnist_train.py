@@ -56,17 +56,19 @@ def train(
     rng = np.random.default_rng(seed)
 
     for epoch in range(1, epochs + 1):
-        epoch_losses = []
+        total_loss = 0.0
+        total_examples = 0
         for x_batch, y_batch in iterate_batches(X_train, y_train, batch_size, rng):
             logits = nn.forward(x_batch)
             loss, grad_loss = softmax_cross_entropy_loss(logits, y_batch)
             nn.backward(grad_loss)
             optimizer.step(nn.params())
-            epoch_losses.append(loss)
+            total_loss += loss * len(x_batch)
+            total_examples += len(x_batch)
 
         val_logits = nn.forward(X_val)
         val_acc = accuracy(val_logits, y_val)
-        train_loss = np.mean(epoch_losses)
+        train_loss = total_loss / total_examples
 
         wandb.log(
             {
@@ -78,8 +80,7 @@ def train(
         )
 
         print(
-            f"epoch {epoch} av {epochs}"
-            f"trenings loss = {train_loss:.4f}"
+            f"epoch {epoch + 1} av {epochs}"
             f"training loss = {train_loss:.4f}"
             f"accuracy = {val_acc:.4f}"
         )
