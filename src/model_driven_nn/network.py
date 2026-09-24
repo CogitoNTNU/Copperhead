@@ -20,3 +20,7 @@ class Network:
 
     def params(self) -> list[Parameter]:
         return self.model.params()
+
+    def zero_grad(self) -> None:
+        for param in self.params():
+            param.zero_grad()
