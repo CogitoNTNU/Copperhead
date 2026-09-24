@@ -4,7 +4,7 @@ from src.nn.frederik.model import Sequential
 from src.nn.frederik.linear import Linear
 from src.nn.frederik.activation import ReLU
 from src.nn.frederik.loss import MSE_loss
-from src.nn.kristian.optimizer import SGD
+from src.nn.frederik.optimizer import SGD
 
 
 def main():
@@ -23,6 +23,9 @@ def main():
 
     for i in range(epochs):
         pred = network.forward(x)
+        loss = loss_fn.forward(pred, y)
+        print(loss)
+
         network.backward(loss_fn.backward())
 
         opt.step(network.parameters())
