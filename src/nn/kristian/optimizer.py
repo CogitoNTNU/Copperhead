@@ -5,3 +5,12 @@ class KristianSgd:
     def step(self, params):
         for parameter, gradient in params:
             parameter -= self.learning_rate * gradient
+
+
+class SGD:
+    def __init__(self, learning_rate):
+        self.learning_rate = learning_rate
+
+    def step(self, params):
+        for p in params:
+            p.data -= self.learning_rate * p.grad
