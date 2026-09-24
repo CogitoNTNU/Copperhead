@@ -22,4 +22,4 @@ class Sequential(Module):
         return out
 
     def params(self):
-        return [p for m in self.modules for p in m.parameters()]
+        return [p for m in self.modules for p in m.params()]
