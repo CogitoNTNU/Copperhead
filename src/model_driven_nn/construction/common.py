@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from .types import YamlMapping
+from model_driven_nn.types import YamlMapping
 
 
 def positive_int(value: object, name: str) -> int:

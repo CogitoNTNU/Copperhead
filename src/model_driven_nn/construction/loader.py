@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from .builder import Builder
-from .common import positive_int, validate_mapping
-from .components import Structure
-from .network import Network
-from .parser import Parser
-from .types import Config
+from model_driven_nn.components import Structure
+from model_driven_nn.construction.builder import Builder
+from model_driven_nn.construction.common import positive_int, validate_mapping
+from model_driven_nn.construction.parser import Parser
+from model_driven_nn.network import Network
+from model_driven_nn.types import Config
 
 
 class Loader:
