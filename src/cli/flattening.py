@@ -4,7 +4,7 @@ import yaml
 
 from model_driven_nn.construction.parser import Parser
 from model_driven_nn.construction.validator import Validator
-from model_driven_nn.types import Config
+from src.types import Config
 
 
 def flatten_yaml(

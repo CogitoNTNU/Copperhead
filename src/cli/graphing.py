@@ -7,7 +7,7 @@ from pathlib import Path
 from model_driven_nn.construction.common import positive_int, validate_mapping
 from model_driven_nn.construction.parser import Parser
 from model_driven_nn.construction.validator import Validator
-from model_driven_nn.types import Config, YamlMapping
+from src.types import Config, YamlMapping
 
 
 def graph_yaml(

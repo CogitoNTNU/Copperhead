@@ -1,6 +1,7 @@
+from src.types import FloatArray
+
 from .components import Structure
 from .parameter import Parameter
-from .types import FloatArray
 
 
 class Network:

@@ -1,7 +1,8 @@
 import numpy as np
 
+from src.types import FloatArray
+
 from ..parameter import Parameter
-from ..types import FloatArray
 from .base import Layer
 
 

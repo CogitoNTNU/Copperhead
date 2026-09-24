@@ -1,6 +1,7 @@
 import numpy as np
 
-from ..types import BoolArray, FloatArray
+from src.types import BoolArray, FloatArray
+
 from .base import Activation
 
 

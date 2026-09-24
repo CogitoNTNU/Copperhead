@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
+from src.types import FloatArray
+
 from ..parameter import Parameter
-from ..types import FloatArray
 
 
 class Component(ABC):

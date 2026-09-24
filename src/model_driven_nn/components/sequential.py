@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 
-from ..types import FloatArray
+from src.types import FloatArray
+
 from .base import Component, Structure
 
 
