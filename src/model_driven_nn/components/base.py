@@ -7,7 +7,12 @@ from ..parameter import Parameter
 
 class Component(ABC):
     @abstractmethod
-    def forward(self, x: FloatArray) -> FloatArray:
+    def forward(
+        self,
+        x: FloatArray,
+        *,
+        cache: bool = True,
+    ) -> FloatArray:
         """Compute the component output for x."""
 
     @abstractmethod

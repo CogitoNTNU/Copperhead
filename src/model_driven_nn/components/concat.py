@@ -17,9 +17,18 @@ class Concat(Structure):
         )
         self._branch_output_dims: list[int] | None = None
 
-    def forward(self, x: FloatArray) -> FloatArray:
-        outputs = [branch.forward(x) for branch in self.branches]
-        self._branch_output_dims = [output.shape[-1] for output in outputs]
+    def forward(
+        self,
+        x: FloatArray,
+        *,
+        cache: bool = True,
+    ) -> FloatArray:
+        outputs = [branch.forward(x, cache=cache) for branch in self.branches]
+        branch_output_dims = [output.shape[-1] for output in outputs]
+
+        if cache:
+            self._branch_output_dims = branch_output_dims
+
         if (
             self.output_dims is not None
             and self._branch_output_dims != self.output_dims

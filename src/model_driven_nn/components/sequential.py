@@ -9,9 +9,14 @@ class Sequential(Structure):
     def __init__(self, components: Iterable[Component]) -> None:
         self.components: list[Component] = list(components)
 
-    def forward(self, x: FloatArray) -> FloatArray:
+    def forward(
+        self,
+        x: FloatArray,
+        *,
+        cache: bool = True,
+    ) -> FloatArray:
         for component in self.components:
-            x = component.forward(x)
+            x = component.forward(x, cache=cache)
         return x
 
     def backward(self, d_y: FloatArray) -> FloatArray:

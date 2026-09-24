@@ -18,7 +18,7 @@ def evaluate(network: Network, *, seed: int) -> tuple[float, float]:
     """Evaluate on the held-out split produced by ``load_mnist``."""
     _, _, x_val, y_val = load_mnist(seed=seed)
 
-    logits = network.forward(x_val)
+    logits = network.predict(x_val)
     loss, _ = softmax_cross_entropy_loss(logits, y_val)
     acc = accuracy(logits, y_val)
 

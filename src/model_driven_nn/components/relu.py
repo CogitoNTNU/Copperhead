@@ -9,8 +9,14 @@ class ReLU(Activation):
     def __init__(self) -> None:
         self.mask: BoolArray | None = None
 
-    def forward(self, x: FloatArray) -> FloatArray:
-        self.mask = x > 0
+    def forward(
+        self,
+        x: FloatArray,
+        *,
+        cache: bool = True,
+    ) -> FloatArray:
+        if cache:
+            self.mask = x > 0
         return np.maximum(x, 0)
 
     def backward(self, d_y: FloatArray) -> FloatArray:

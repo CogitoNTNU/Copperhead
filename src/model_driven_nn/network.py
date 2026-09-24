@@ -13,8 +13,11 @@ class Network:
         self.input_dim: int = input_dim
         self.output_dim: int = output_dim
 
-    def forward(self, x: FloatArray) -> FloatArray:
-        return self.model.forward(x)
+    def predict(self, x: FloatArray) -> FloatArray:
+        return self.forward(x, cache=False)
+
+    def forward(self, x: FloatArray, *, cache: bool = True) -> FloatArray:
+        return self.model.forward(x, cache=cache)
 
     def backward(self, d_y: FloatArray) -> FloatArray:
         return self.model.backward(d_y)

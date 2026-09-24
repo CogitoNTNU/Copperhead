@@ -87,7 +87,7 @@ def train(
             total_loss += loss * len(x_batch)
             total_examples += len(x_batch)
 
-        val_logits = network.forward(X_val)
+        val_logits = network.predict(X_val)
         val_acc = accuracy(val_logits, y_val)
         train_loss = total_loss / total_examples
 

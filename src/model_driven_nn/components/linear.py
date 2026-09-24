@@ -15,8 +15,14 @@ class Linear(Layer):
 
         self.x: FloatArray | None = None
 
-    def forward(self, x: FloatArray) -> FloatArray:
-        self.x = x
+    def forward(
+        self,
+        x: FloatArray,
+        *,
+        cache: bool = True,
+    ) -> FloatArray:
+        if cache:
+            self.x = x
         return np.dot(x, self.W.data) + self.b.data
 
     def backward(self, d_y: FloatArray) -> FloatArray:
