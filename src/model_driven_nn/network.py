@@ -1,4 +1,4 @@
-from src.types import FloatArray
+from shared.types import FloatArray
 
 from .components import Structure
 from .parameter import Parameter

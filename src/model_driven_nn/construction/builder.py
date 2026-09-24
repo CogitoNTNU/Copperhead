@@ -2,7 +2,7 @@ from typing import Never
 
 from model_driven_nn.components import Component, Concat, Linear, ReLU, Sequential
 from model_driven_nn.construction.common import positive_int, validate_mapping
-from src.types import YamlMapping
+from shared.types import YamlMapping
 
 type BuildResult = tuple[Component, int]
 

@@ -5,7 +5,7 @@ from model_driven_nn.construction.builder import Builder
 from model_driven_nn.construction.common import positive_int, validate_mapping
 from model_driven_nn.construction.parser import Parser
 from model_driven_nn.network import Network
-from src.types import Config
+from shared.types import Config
 
 
 class Loader:

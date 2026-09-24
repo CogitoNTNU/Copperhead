@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from src.types import YamlMapping
+from shared.types import YamlMapping
 
 
 def positive_int(value: object, name: str) -> int:

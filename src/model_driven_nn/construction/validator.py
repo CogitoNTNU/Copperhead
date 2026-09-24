@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from model_driven_nn.construction.common import positive_int, validate_mapping
-from src.types import YamlMapping
+from shared.types import YamlMapping
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,3 @@
-"""Shared array and parameter types used by the neural-network framework."""
-
 from collections.abc import Mapping
 
 import numpy as np

@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from src.types import FloatArray
+from shared.types import FloatArray
 
 from .base import Component, Structure
 

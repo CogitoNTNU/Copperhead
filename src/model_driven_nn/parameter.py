@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.types import FloatArray
+from shared.types import FloatArray
 
 
 @dataclass

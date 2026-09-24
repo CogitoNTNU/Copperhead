@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.types import FloatArray
+from shared.types import FloatArray
 
 from ..parameter import Parameter
 

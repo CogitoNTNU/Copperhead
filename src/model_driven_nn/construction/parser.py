@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 from model_driven_nn.construction.common import validate_mapping
-from src.types import Config, YamlMapping
+from shared.types import Config, YamlMapping
 
 _REFERENCE = re.compile(r"\$\{([^{}]+)\}")
 type Lookup = Callable[[str], object]
