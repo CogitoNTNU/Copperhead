@@ -1,6 +1,7 @@
 import numpy as np
 
 import wandb
+from model_driven_nn import Network
 from src.data.mnist_loader import load_mnist
 
 
@@ -35,16 +36,15 @@ def iterate_batches(X, y, batch_size, rng):
 
 
 def train(
-    nn,
+    network: Network,
     optimizer,
     epochs=5,
     batch_size=64,
     seed=0,
-    engine_name="kristian",
 ):
     wandb.init(
         project="copperhead-mnist",
-        name=engine_name,
+        name=network.name,
         config={
             "epochs": epochs,
             "batch_size": batch_size,
@@ -55,18 +55,22 @@ def train(
     X_train, y_train, X_val, y_val = load_mnist(seed=seed)
     rng = np.random.default_rng(seed)
 
-    for epoch in range(1, epochs + 1):
+    for epoch in range(epochs):
         total_loss = 0.0
         total_examples = 0
         for x_batch, y_batch in iterate_batches(X_train, y_train, batch_size, rng):
-            logits = nn.forward(x_batch)
+            network.zero_grad()
+
+            logits = network.forward(x_batch)
             loss, grad_loss = softmax_cross_entropy_loss(logits, y_batch)
-            nn.backward(grad_loss)
-            optimizer.step(nn.params())
+
+            network.backward(grad_loss)
+            optimizer.step(network.params())
+
             total_loss += loss * len(x_batch)
             total_examples += len(x_batch)
 
-        val_logits = nn.forward(X_val)
+        val_logits = network.forward(X_val)
         val_acc = accuracy(val_logits, y_val)
         train_loss = total_loss / total_examples
 
@@ -86,4 +90,4 @@ def train(
         )
 
     wandb.finish()
-    return nn
+    return network
