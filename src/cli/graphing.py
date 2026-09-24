@@ -124,8 +124,8 @@ def graph_yaml(
                 if source is not None and target is not None
             )
 
-        for source, target in pairs:
-            lines.append(f"  {source} -> {target};")
+        for source_node, target in pairs:
+            lines.append(f"  {source_node} -> {target};")
 
     def visit(
         spec: YamlMapping,
