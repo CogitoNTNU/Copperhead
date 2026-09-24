@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from ..types import FloatArray, ParameterPair
+from ..types import FloatArray
 from .base import Component, Structure
 
 
@@ -39,5 +39,5 @@ class Concat(Structure):
         ]
         return np.sum(input_gradients, axis=0)
 
-    def params(self) -> list[ParameterPair]:
-        return [parameter for branch in self.branches for parameter in branch.params()]
+    def children(self) -> list[Component]:
+        return self.branches

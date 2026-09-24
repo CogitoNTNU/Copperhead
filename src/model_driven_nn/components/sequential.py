@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from ..types import FloatArray, ParameterPair
+from ..types import FloatArray
 from .base import Component, Structure
 
 
@@ -18,9 +18,5 @@ class Sequential(Structure):
             d_y = component.backward(d_y)
         return d_y
 
-    def params(self) -> list[ParameterPair]:
-        return [
-            parameter
-            for component in self.components
-            for parameter in component.params()
-        ]
+    def children(self) -> list[Component]:
+        return self.components

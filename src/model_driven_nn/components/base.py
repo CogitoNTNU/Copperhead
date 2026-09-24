@@ -26,3 +26,9 @@ class Activation(Component, ABC):
 
 class Structure(Component, ABC):
     """Marker base class for model structures."""
+
+    @abstractmethod
+    def children(self) -> list[Component]: ...
+
+    def params(self) -> list[ParameterPair]:
+        return [parameter for child in self.children() for parameter in child.params()]
