@@ -101,8 +101,8 @@ def train(
         )
 
         print(
-            f"epoch {epoch + 1} av {epochs}"
-            f"training loss = {train_loss:.4f}"
+            f"epoch {epoch + 1} av {epochs} | "
+            f"training loss = {train_loss:.4f} | "
             f"accuracy = {val_acc:.4f}"
         )
 
