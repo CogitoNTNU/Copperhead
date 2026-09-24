@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from ..types import FloatArray, ParameterPair
+from ..parameter import Parameter
+from ..types import FloatArray
 
 
 class Component(ABC):
@@ -12,7 +13,7 @@ class Component(ABC):
     def backward(self, d_y: FloatArray) -> FloatArray:
         """Return the gradient with respect to the component input."""
 
-    def params(self) -> list[ParameterPair]:
+    def params(self) -> list[Parameter]:
         return []
 
 
@@ -30,5 +31,5 @@ class Structure(Component, ABC):
     @abstractmethod
     def children(self) -> list[Component]: ...
 
-    def params(self) -> list[ParameterPair]:
+    def params(self) -> list[Parameter]:
         return [parameter for child in self.children() for parameter in child.params()]

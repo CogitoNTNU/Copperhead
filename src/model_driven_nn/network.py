@@ -1,5 +1,6 @@
 from .components import Structure
-from .types import FloatArray, ParameterPair
+from .parameter import Parameter
+from .types import FloatArray
 
 
 class Network:
@@ -17,5 +18,5 @@ class Network:
     def backward(self, d_y: FloatArray) -> FloatArray:
         return self.model.backward(d_y)
 
-    def params(self) -> list[ParameterPair]:
+    def params(self) -> list[Parameter]:
         return self.model.params()
