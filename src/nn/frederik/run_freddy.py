@@ -17,7 +17,7 @@ def main():
     x = np.array([[1, 2, 3, 4]])
     y = np.array([1, 1, 1, 1])
 
-    before = [p.data.copy() for p in network.parameters()]
+    before = [p.data.copy() for p in network.params()]
 
     epochs = 20
 
@@ -28,9 +28,9 @@ def main():
 
         network.backward(loss_fn.backward())
 
-        opt.step(network.parameters())
+        opt.step(network.params())
 
-    for i, (p, b) in enumerate(zip(network.parameters(), before)):
+    for i, (p, b) in enumerate(zip(network.params(), before)):
         print(i, "endring:", np.linalg.norm(p.data - b))
 
     pred = network.forward(x)

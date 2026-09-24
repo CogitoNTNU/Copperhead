@@ -17,5 +17,5 @@ class ReLU(Module):
     def backward(self, dout):
         return dout * self.mask
 
-    def parameters(self):
+    def params(self):
         return []

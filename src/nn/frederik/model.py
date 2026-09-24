@@ -21,5 +21,5 @@ class Sequential(Module):
 
         return out
 
-    def parameters(self):
+    def params(self):
         return [p for m in self.modules for p in m.parameters()]

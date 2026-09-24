@@ -67,5 +67,5 @@ class Linear(Module):
 
         return dout @ self.weight.data  # partial C / partial z^{L-1}
 
-    def parameters(self):
+    def params(self):
         return [p for p in (self.weight, self.bias) if p is not None]

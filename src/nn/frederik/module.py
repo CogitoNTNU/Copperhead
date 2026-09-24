@@ -17,5 +17,5 @@ class Module:
     def backward(self, x):
         raise NotImplementedError
 
-    def parameters(self):
+    def params(self):
         return []
