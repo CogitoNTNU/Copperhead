@@ -10,7 +10,7 @@ dependencies = [
     "ipykernel>=7.3.0",
     "pandas>=3.0.5",
     "scikit-learn>=1.9.0",
-    "wandb>=0.29.0",
+    "wandb>=0.30.0",
 ]
 
 
