@@ -254,7 +254,7 @@ lerna-debug.log
 Thumbs.db
 
 
-wandb
+**/wandb/
 
 
 *.svg
