@@ -59,13 +59,15 @@ class Linear(Module):
 
     def backward(self, dout):
         """dout: (batch, out) -> dx: (batch, in)"""
-        # here dout = delta^L
-        self.weight.grad = dout.T @ self.x  # sum(sigma(z_k^{l-1}) * delta_j^l)
+        # dout[b] = delta^l(b) = dC/dz^l for sample b
+        self.weight.grad = dout.T @ self.x  # sum_b delta_j^l(b) * a_k^{l-1}(b)
 
         if self.bias is not None:
-            self.bias.grad = dout.sum(axis=0)  # sum(delta_j^l)
+            self.bias.grad = dout.sum(axis=0)  # sum_b delta_j^l(b)
 
-        return dout @ self.weight.data  # partial C / partial z^{L-1}
+        return (
+            dout @ self.weight.data
+        )  # dC/da^{l-1} = W^T delta^l (before sigma'(z^{l-1}))
 
     def params(self):
         return [p for p in (self.weight, self.bias) if p is not None]
