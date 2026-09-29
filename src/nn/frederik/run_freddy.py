@@ -3,44 +3,18 @@ import numpy as np
 from src.nn.frederik.model import Sequential
 from src.nn.frederik.linear import Linear
 from src.nn.frederik.activation import ReLU
-from src.nn.frederik.loss import MSE_loss
-from src.nn.frederik.optimizer import SGD
+from src.nn.frederik.optimizer import AdaGrad
+from src.training.mnist_train import train
 
 
 def main():
     rng = np.random.default_rng(seed=42)
-    network = Sequential(Linear(4, 4, rng), ReLU(), Linear(4, 4, rng))
-    loss_fn = MSE_loss()
-    opt = SGD(0.01)
-    # optimizer = KristianSgd(learning_rate=0.1)
+    network = Sequential(
+        Linear(784, 64, rng), ReLU(), Linear(64, 64, rng), ReLU(), Linear(64, 10, rng)
+    )
+    optimizer = AdaGrad(learning_rate=0.01, eps=1e-8)
 
-    x = np.array([[1, 2, 3, 4]])
-    y = np.array([1, 1, 1, 1])
-
-    before = [p.data.copy() for p in network.params()]
-
-    epochs = 20
-
-    for i in range(epochs):
-        pred = network.forward(x)
-        loss = loss_fn.forward(pred, y)
-        print(loss)
-
-        network.backward(loss_fn.backward())
-
-        opt.step(network.params())
-
-    for i, (p, b) in enumerate(zip(network.params(), before)):
-        print(i, "endring:", np.linalg.norm(p.data - b))
-
-    pred = network.forward(x)
-    print(loss_fn.forward(pred, y))
-
-    """train(
-        nn=network,
-        optimizer=optimizer,
-        engine_name="frederik",
-    )"""
+    train(nn=network, optimizer=optimizer, engine_name="frederik", epochs=50)
 
 
 if __name__ == "__main__":
