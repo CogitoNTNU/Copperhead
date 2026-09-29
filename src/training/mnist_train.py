@@ -7,6 +7,7 @@ from src.data.mnist_loader import load_mnist
 def softmax_cross_entropy_loss(logits, y_true):
     # softmax for å gjøre om nn outputs til sannsynlighetsfordeling
     # cross entropy loss for dette er vanlig i klassifiseringsproblemer
+    # categorical cross entropy loss w softmax
     shifted = logits - logits.max(axis=1, keepdims=True)
     exp = np.exp(shifted)
     probs = exp / exp.sum(axis=1, keepdims=True)
@@ -39,9 +40,9 @@ def iterate_batches(X, y, batch_size, rng):
 def train(
     nn,
     optimizer,
-    epochs=5,
+    epochs=100,
     batch_size=64,
-    seed=0,
+    seed=42,
     engine_name="kristian",
 ):
     # logge i wandb initalisering
