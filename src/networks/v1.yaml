@@ -1,21 +1,116 @@
-name: mnist_classifier
+name: mnist_classifier_extreme
 input_dim: 784
+
 config:
-  hidden_dim: 1024
   classes: 10
+
 output_dim: ${classes}
 
 model:
   type: sequential
   layers:
     - type: linear
-      output_dim: ${hidden_dim}
+      output_dim: 512
+    - type: relu
+
+    - type: linear
+      output_dim: 512
+    - type: relu
+
+    - type: linear
+      output_dim: 256
+    - type: relu
+
+    - type: linear
+      output_dim: 256
+    - type: relu
+
+    # Every path receives the same 256-dimensional input.
+    # Their outputs are concatenated together.
+    - type: concat
+      paths:
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 32
+
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 32
+
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 32
+
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 64
+            - type: relu
+            - type: linear
+              output_dim: 32
+
+    # concat = 32 + 32 + 32 + 32 = 128
+
     - type: relu
     - type: linear
-      output_dim: ${hidden_dim}
+      output_dim: 64
     - type: relu
     - type: linear
-      output_dim: ${hidden_dim}
+      output_dim: 64
     - type: relu
+    - type: linear
+      output_dim: 64
+    - type: relu
+    - type: concat
+      paths:
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 32
+            - type: relu
+            - type: linear
+              output_dim: 32
+
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 32
+            - type: relu
+            - type: linear
+              output_dim: 32
+
+        - type: sequential
+          layers:
+            - type: linear
+              output_dim: 32
+            - type: relu
+            - type: linear
+              output_dim: 32
+    - type: relu
+    # 96 shared features
     - type: linear
       output_dim: ${classes}
