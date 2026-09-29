@@ -1,14 +1,14 @@
 import numpy as np
 
 from src.data.mnist_loader import load_mnist
-from src.nn.kristian import skeleton_nn
+from src.nn.base_nn import your_nn
 from src.training.mnist_train import accuracy
 
 
 def validate(weights_path="data/basic_nn_weights.npz", seed=0):
     _, _, X_val, y_val = load_mnist(seed=seed)
 
-    nn = skeleton_nn()
+    nn = your_nn
     saved = np.load(weights_path)
     nn.W[:] = saved["W"]
     nn.b[:] = saved["b"]
