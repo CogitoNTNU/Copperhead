@@ -16,6 +16,7 @@ class KristianNN:
 
     def forward(self, x):
         self.x = x
+        x = x @ self.W + self.b
         return (self.x @ self.W) + self.b
 
     def backward(self, grad_output):
