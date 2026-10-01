@@ -5,6 +5,7 @@ import numpy as np
 import wandb
 
 
+# required agent structure
 class Agent(Protocol):
     def act(self, obs: np.ndarray, greedy: bool = False) -> int: ...
     def observe(self, obs, action, reward, next_obs, terminated) -> dict | None: ...
