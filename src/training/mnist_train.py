@@ -53,9 +53,9 @@ def iterate_batches(
 def train(
     network: Network,
     optimizer: Optimizer,
-    epochs: int = 5,
+    epochs: int = 100,
     batch_size: int = 64,
-    seed: int = 0,
+    seed: int = 0xC0FFE,
 ) -> Network:
     wandb.init(
         project="copperhead-mnist",
