@@ -252,3 +252,9 @@ lerna-debug.log
 # System Files
 .DS_Store
 Thumbs.db
+
+s
+# WadnB
+**/wandb/
+*.wand
+wandb/latest-runs
