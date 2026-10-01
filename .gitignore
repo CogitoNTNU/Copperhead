@@ -256,8 +256,9 @@ lerna-debug.log
 .DS_Store
 Thumbs.db
 
-
+# WadnB
 **/wandb/
-
+*.wand
+wandb/latest-runs
 
 *.svg
