@@ -1246,9 +1246,9 @@ tzdata==2026.4 ; sys_platform == 'emscripten' or sys_platform == 'win32' \
 urllib3==2.8.0 \
     --hash=sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3 \
     --hash=sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63
-virtualenv==21.14.2 \
-    --hash=sha256:571930928b11e43db690073ad8228162eca8a3f8fd3a87acdeae07df7dd57068 \
-    --hash=sha256:6a8b7fd4e4ee00ebcdc1c5ee8cffd035d1fe130e354e8c9a44f510aac8affdc1
+virtualenv==21.14.4 \
+    --hash=sha256:2d1a394ef089220b4606408b184433e49417a6e5590a09c7b8a67fb1e013af56 \
+    --hash=sha256:d7f167214b3c4f69df5386677dae5091dbc9c400fc46080187ae28064c9d453d
 wandb==0.30.0 \
     --hash=sha256:1f2cc20c033f1650d387ca073177e629f1e2a1b5c4be393698e3db4752b9cf3a \
     --hash=sha256:217bde0a7c49482f26166a1a7bee760bb9e2658135b2d45a33aacabffec68817 \
