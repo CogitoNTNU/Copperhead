@@ -1,7 +1,9 @@
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Protocol
+from typing import Protocol
 
 import numpy as np
+
 import wandb
 
 

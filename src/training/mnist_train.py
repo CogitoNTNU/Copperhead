@@ -3,10 +3,10 @@ from collections.abc import Iterator
 import numpy as np
 
 import wandb
-from data.mnist_loader import load_mnist
-from model_driven_nn import Network
-from optimizer.optimizer import Optimizer
-from shared.types import FloatArray, IntArray
+from copperhead.data import load_mnist
+from copperhead.model_driven_nn import Network
+from copperhead.optimizer.optimizer import Optimizer
+from copperhead.shared.types import FloatArray, IntArray
 
 
 def softmax_cross_entropy_loss(
