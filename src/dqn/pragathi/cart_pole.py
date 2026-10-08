@@ -27,15 +27,16 @@ class CartPoleAgent:
 
         self.training_error = []
 
-    def act(self, observation: tuple[float, float, float, float], greedy: bool):
+    def act(self, observation, greedy: bool = False):
+        observation = tuple(observation)
 
-        if greedy:
-            return int(np.argmax(self.q_values[observation]))
+        # if greedy:
+        #     return int(np.argmax(self.q_values[observation]))
 
-        if np.random.random() < self.epsilon:
-            return self.env.action_space.sample()
+        # if np.random.random() < self.epsilon:
+        return self.env.action_space.sample()
 
-        return int(np.argmax(self.q_values[observation]))
+        # return int(np.argmax(self.q_values[observation]))
 
     def observe(
         self,
@@ -46,12 +47,12 @@ class CartPoleAgent:
         terminated: bool,
     ):
 
+        obs = tuple(obs)
         next_obs = tuple(next_obs)
-        obs = tuple(next_obs)
+
         future_q_value = (not terminated) * np.max(self.q_values[next_obs])
 
         target = reward + self.discount_factor * future_q_value
-
 
         temporal_difference = target - self.q_values[obs][action]
 
@@ -60,6 +61,8 @@ class CartPoleAgent:
         )
 
         self.training_error.append(temporal_difference)
+        self.decay_epsilon()
+        return self.q_values
 
     #TODO discretize
     def decay_epsilon(self):
