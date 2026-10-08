@@ -49,14 +49,17 @@ class Board:
 
     @property
     def head(self) -> tuple[int, int]:
+        """Returns the position of the snake's head."""
         return self.body[0]
 
     @property
     def direction(self) -> tuple[int, int]:
+        """Returns the direction the snake is moving in as (dy, dx)."""
         (head_y, head_x), (neck_y, neck_x) = self.body[0], self.body[1]
         return (head_y - neck_y, head_x - neck_x)
 
     def spawn_apple(self) -> bool:
+        """Places an apple on a random empty tile. Returns False if the board is full."""
         empty = np.flatnonzero(self.tiles == Tile.EMPTY)
 
         if len(empty) == 0:
@@ -66,6 +69,7 @@ class Board:
         return True
 
     def in_bounds(self, pos: tuple[int, int]) -> bool:
+        """Checks if the given position is inside the board."""
         pos_y, pos_x = pos
 
         if pos_y < 0 or pos_y > self.height - 1:
@@ -76,6 +80,7 @@ class Board:
         return True
 
     def next_pos(self, action: Action) -> tuple[int, int]:
+        """Returns the next head position for the given action. Reversing is ignored."""
         dy, dx = (0, 0)
 
         if action == Action.LEFT:
@@ -96,6 +101,7 @@ class Board:
         return (self.head[0] + dy, self.head[1] + dx)
 
     def move(self, action: Action) -> Event:
+        """Moves the snake one step and returns what happened."""
         new_pos = self.next_pos(action)
 
         if not self.in_bounds(new_pos):
@@ -145,6 +151,7 @@ class SnakeEnv:
         self.board = None
 
     def get_obs(self) -> np.ndarray:
+        """Returns the board as a flat float vector for the network."""
         tiles = self.board.tiles
         # divide board in 3 channels, with 1 as indicator, and flatten to one float vector
         return (
@@ -154,6 +161,7 @@ class SnakeEnv:
         )
 
     def step(self, action: int) -> tuple[tuple[np.ndarray], float, bool, bool, dict]:
+        """Takes one action and returns (obs, reward, terminated, truncated, info)."""
         event = self.board.move(Action(action))
 
         terminated = event in (Event.DIED, Event.WON)
@@ -172,6 +180,7 @@ class SnakeEnv:
         return next_obs, reward, terminated, truncated, info
 
     def reset(self, seed=None) -> tuple[tuple, dict]:
+        """Resets the environment with, optionally, a new seed."""
         if seed is not None:
             self.rng = np.random.default_rng(seed)
 
@@ -181,4 +190,5 @@ class SnakeEnv:
         return self.get_obs(), {}
 
     def render(self):
+        """Prints the board to the terminal."""
         print(self.board.tiles)
