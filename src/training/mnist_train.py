@@ -1,22 +1,27 @@
+from collections.abc import Iterator
+
 import numpy as np
 
 import wandb
-from src.data.mnist_loader import load_mnist
+from data.mnist_loader import load_mnist
+from model_driven_nn import Network
+from optimizer.optimizer import Optimizer
+from shared.types import FloatArray, IntArray
 
 
-def softmax_cross_entropy_loss(logits, y_true):
-    # softmax for å gjøre om nn outputs til sannsynlighetsfordeling
-    # cross entropy loss for dette er vanlig i klassifiseringsproblemer
-    # categorical cross entropy loss w softmax
+def softmax_cross_entropy_loss(
+    logits: FloatArray,
+    y_true: IntArray,
+) -> tuple[float, FloatArray]:
     shifted = logits - logits.max(axis=1, keepdims=True)
     exp = np.exp(shifted)
     probs = exp / exp.sum(axis=1, keepdims=True)
 
     n = logits.shape[0]
 
-    log_likelyhood = -np.log(probs[np.arange(n), y_true] + 1e-12)
+    log_likelihood = -np.log(probs[np.arange(n), y_true] + 1e-12)
 
-    loss = log_likelyhood.mean()
+    loss = log_likelihood.mean()
 
     grad = probs.copy()
     grad[np.arange(n), y_true] -= 1
@@ -24,12 +29,20 @@ def softmax_cross_entropy_loss(logits, y_true):
     return loss, grad
 
 
-def accuracy(logits, y_true):
+def accuracy(
+    logits: FloatArray,
+    y_true: IntArray,
+) -> float:
     preds = logits.argmax(axis=1)
-    return (preds == y_true).mean()
+    return float((preds == y_true).mean())
 
 
-def iterate_batches(X, y, batch_size, rng):
+def iterate_batches(
+    X: FloatArray,
+    y: IntArray,
+    batch_size: int,
+    rng: np.random.Generator,
+) -> Iterator[tuple[FloatArray, IntArray]]:
     n = len(X)
     perm = rng.permutation(n)
     for start in range(0, n, batch_size):
@@ -38,17 +51,15 @@ def iterate_batches(X, y, batch_size, rng):
 
 
 def train(
-    nn,
-    optimizer,
-    epochs=100,
-    batch_size=64,
-    seed=42,
-    engine_name="kristian",
-):
-    # logge i wandb initalisering
+    network: Network,
+    optimizer: Optimizer,
+    epochs: int = 100,
+    batch_size: int = 64,
+    seed: int = 0xC0FFE,
+) -> Network:
     wandb.init(
         project="copperhead-mnist",
-        name=engine_name,
+        name=network.name,
         config={
             "epochs": epochs,
             "batch_size": batch_size,
@@ -56,22 +67,29 @@ def train(
         },
     )
 
-    # trening
+    optimizer.parameters = network.params()
+
     X_train, y_train, X_val, y_val = load_mnist(seed=seed)
     rng = np.random.default_rng(seed)
 
-    for epoch in range(1, epochs + 1):
-        epoch_losses = []
+    for epoch in range(epochs):
+        total_loss = 0.0
+        total_examples = 0
         for x_batch, y_batch in iterate_batches(X_train, y_train, batch_size, rng):
-            logits = nn.forward(x_batch)
-            loss, grad_loss = softmax_cross_entropy_loss(logits, y_batch)
-            nn.backward(grad_loss)
-            optimizer.step(nn.params())
-            epoch_losses.append(loss)
+            network.zero_grad()
 
-        val_logits = nn.forward(X_val)
+            logits = network.forward(x_batch)
+            loss, grad_loss = softmax_cross_entropy_loss(logits, y_batch)
+
+            network.backward(grad_loss)
+            optimizer.step()
+
+            total_loss += loss * len(x_batch)
+            total_examples += len(x_batch)
+
+        val_logits = network.predict(X_val)
         val_acc = accuracy(val_logits, y_val)
-        train_loss = np.mean(epoch_losses)
+        train_loss = total_loss / total_examples
 
         wandb.log(
             {
@@ -83,10 +101,10 @@ def train(
         )
 
         print(
-            f"epoch {epoch} av {epochs}"
-            f"trenings loss = {train_loss:.4f}"
+            f"epoch {epoch + 1} av {epochs} | "
+            f"training loss = {train_loss:.4f} | "
             f"accuracy = {val_acc:.4f}"
         )
 
     wandb.finish()
-    return nn
+    return network
