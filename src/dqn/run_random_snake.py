@@ -1,3 +1,5 @@
+import os
+import time
 import numpy as np
 from src.dqn.snake_env import SnakeEnv, Action
 
@@ -8,6 +10,9 @@ env.render()
 for i in range(100):
     action = Action(np.random.randint(0, 4))
     obs, reward, terminated, truncated, info = env.step(action)
+
+    time.sleep(0.5)  # sleep for 500 ms
+    os.system("cls")
 
     print(f"\n {action.name}:")
     env.render()
