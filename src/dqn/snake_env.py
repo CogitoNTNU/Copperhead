@@ -65,7 +65,7 @@ class Board:
         self.tiles.flat[self.rng.choice(empty)] = Tile.APPLE
         return True
 
-    def in_bounds(self, pos) -> bool:
+    def in_bounds(self, pos: tuple[int, int]) -> bool:
         pos_y, pos_x = pos
 
         if pos_y < 0 or pos_y > self.height - 1:
@@ -153,7 +153,7 @@ class SnakeEnv:
             .ravel()
         )
 
-    def step(self, action: int):
+    def step(self, action: int) -> tuple[tuple[np.ndarray], float, bool, bool, dict]:
         event = self.board.move(Action(action))
 
         terminated = event in (Event.DIED, Event.WON)
@@ -171,7 +171,7 @@ class SnakeEnv:
 
         return next_obs, reward, terminated, truncated, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None) -> tuple[tuple, dict]:
         if seed is not None:
             self.rng = np.random.default_rng(seed)
 
