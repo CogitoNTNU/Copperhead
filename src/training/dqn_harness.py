@@ -59,7 +59,7 @@ def train(
 
     run = wandb.init(
         project="copperhead-rl",
-        entity=None,
+        entity="Copperhead",
         group=group,  # seeds of the same setup, like "dqn-cartpole"
         name=name,
         config={"seed": seed, "n_steps": n_steps, **(config or {})},
