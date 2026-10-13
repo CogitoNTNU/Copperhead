@@ -150,6 +150,11 @@ class SnakeEnv:
         self.board = None
 
     @property
+    def obs_shape(self) -> tuple[int, int, int]:
+        """Returns the shape of the observation space."""
+        return (3, self.height, self.width)
+
+    @property
     def n_actions(self) -> int:
         """Returns the length of the action space."""
         return len(Action)
