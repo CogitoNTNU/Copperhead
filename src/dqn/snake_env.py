@@ -146,9 +146,18 @@ class SnakeEnv:
             Event.DIED: -1.0,
             Event.WON: 1.0,
         }
-        self.n_actions = len(Action)
         self.rng = np.random.default_rng(seed)
         self.board = None
+
+    @property
+    def n_actions(self) -> int:
+        """Returns the length of the action space."""
+        return len(Action)
+
+    @property
+    def action_space(self) -> tuple[Action, ...]:
+        """Returns the action space."""
+        return tuple(Action)
 
     def get_obs(self) -> np.ndarray:
         """Returns the board as a flat float vector for the network."""
