@@ -9,6 +9,18 @@ updates:
       prefix: "dependency: "
       include: "scope"
     open-pull-requests-limit: 5
+    groups:
+      uv-patch:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+    
+      uv-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
