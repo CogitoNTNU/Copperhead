@@ -109,7 +109,6 @@ class Board:
     def next_pos(self, action: Action) -> tuple[int, int]:
         """Returns the next head position for the given action. Reversing is ignored."""
         dy, dx = DIRS[action]
-
         ry, rx = self.direction
 
         # prevent illegal turn
