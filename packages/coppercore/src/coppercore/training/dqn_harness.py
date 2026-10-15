@@ -1,6 +1,4 @@
-from collections.abc import Callable
-from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 import numpy as np
 import wandb
@@ -9,9 +7,8 @@ import wandb
 # required agent structure
 class Agent(Protocol):
     def act(self, obs: np.ndarray, greedy: bool = False) -> int: ...
+
     def observe(self, obs, action, reward, next_obs, terminated) -> dict | None: ...
-    def save(self, path: str | Path) -> None: ...
-    def load(self, path: str | Path) -> None: ...
 
 
 def evaluate(
@@ -60,7 +57,7 @@ def train(
 
     run = wandb.init(
         project="copperhead-rl",
-        entity=None,
+        entity="Copperhead",
         group=group,  # seeds of the same setup, like "dqn-cartpole"
         name=name,
         config={"seed": seed, "n_steps": n_steps, **(config or {})},
@@ -108,7 +105,7 @@ def train(
 
             if result["return_mean"] > best_eval:
                 best_eval = result["return_mean"]
-                agent.save(f"{run.dir}/best.npz")
+                np.savez(f"{run.dir}/best.npz", **getattr(agent, "params", {}))
                 run.summary["best_eval_return"] = best_eval
 
     # upload the best weights as a WandB artifact
