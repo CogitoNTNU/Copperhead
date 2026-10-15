@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 from enum import Enum, IntEnum, auto
 from collections import deque
 
@@ -22,6 +23,19 @@ class Action(IntEnum):
     RIGHT = 1
     UP = 2
     DOWN = 3
+
+
+DIRS: dict[Action, tuple[int, int]] = {
+    Action.LEFT: (0, -1),
+    Action.RIGHT: (0, 1),
+    Action.UP: (-1, 0),
+    Action.DOWN: (1, 0),
+}
+
+DIRS_ARRAY = np.array(list(DIRS.values()))
+
+# possible states in the Q-table
+N_STATES = 2**8  # 4 danger bits + 4 apple bits
 
 
 class Board:
@@ -79,19 +93,24 @@ class Board:
 
         return True
 
+    def get_tile_neighbours(
+        self, tile: Tile, outside: bool = False
+    ) -> npt.NDArray[np.bool_]:
+        """Check whether a tile type neighbours the head (up, down, left, right)."""
+        neighbours = np.array(self.head) + DIRS_ARRAY
+        xn, yn = neighbours[:, 0], neighbours[:, 1]
+
+        # mask for neighbours that lie on the board
+        W, H = self.tiles.shape
+        inside = (xn >= 0) & (xn < W) & (yn >= 0) & (yn < H)
+
+        result = np.full(4, outside, dtype=bool)
+        result[inside] = self.tiles[xn[inside], yn[inside]] == tile
+        return result
+
     def next_pos(self, action: Action) -> tuple[int, int]:
         """Returns the next head position for the given action. Reversing is ignored."""
-        dy, dx = (0, 0)
-
-        if action == Action.LEFT:
-            dy, dx = (0, -1)
-        elif action == Action.RIGHT:
-            dy, dx = (0, 1)
-        elif action == Action.UP:
-            dy, dx = (-1, 0)
-        elif action == Action.DOWN:
-            dy, dx = (1, 0)
-
+        dy, dx = DIRS[action]
         ry, rx = self.direction
 
         # prevent illegal turn
@@ -135,6 +154,7 @@ class SnakeEnv:
         seed: int = None,
         max_steps_no_food: int = 100,
         rewards=None,
+        obs_mode: str = "state",
     ):
         self.width = width
         self.height = height
@@ -146,9 +166,40 @@ class SnakeEnv:
             Event.DIED: -1.0,
             Event.WON: 1.0,
         }
-        self.n_actions = len(Action)
         self.rng = np.random.default_rng(seed)
+        self.obs_mode = obs_mode
         self.board = None
+
+    @property
+    def n_actions(self) -> int:
+        """Returns the length of the action space."""
+        return len(Action)
+
+    @property
+    def action_space(self) -> tuple[Action, ...]:
+        """Returns the action space."""
+        return tuple(Action)
+
+    def observe(self):
+        return self.get_state() if self.obs_mode == "state" else self.get_obs()
+
+    def get_state(self) -> int:
+        # danger in each direction, including walls
+        dangers_nearby = self.board.get_tile_neighbours(Tile.BODY, outside=True)
+
+        # finding the direction of the apple
+        head = np.array(self.board.head)
+        apples = np.argwhere(self.board.tiles == Tile.APPLE)
+
+        if len(apples) == 0:  # board full, no apple
+            apple_dir = np.zeros(4, dtype=bool)
+        else:
+            diff = apples[0] - head  # vector from head to apple
+            apple_dir = (DIRS_ARRAY @ diff) > 0  # True if apple in same direction
+
+        # 8 bools to an integer 0-255
+        bits = np.concatenate([dangers_nearby, apple_dir])
+        return int(bits @ (1 << np.arange(bits.size)))
 
     def get_obs(self) -> np.ndarray:
         """Returns the board as a flat float vector for the network."""
@@ -172,7 +223,7 @@ class SnakeEnv:
             self.steps_no_food += 1
 
         truncated = self.steps_no_food >= self.max_steps_no_food
-        next_obs = self.get_obs()
+        next_obs = self.observe()
         reward = self.rewards[event]
 
         info = {"length": len(self.board.body)}
@@ -187,7 +238,7 @@ class SnakeEnv:
         self.board = Board(self.width, self.height, self.snake_length, self.rng)
         self.steps_no_food = 0
 
-        return self.get_obs(), {}
+        return self.observe(), {}
 
     def render(self):
         """Prints the board to the terminal."""
