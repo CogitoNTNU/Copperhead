@@ -6,26 +6,24 @@ readme = "README.md"
 requires-python = ">=3.12"
 license-files = ["LICENSE"]
 dependencies = [
-    "gymnasium>=1.4.0",
-    "ipykernel>=7.3.0",
-    "matplotlib>=3.11.2",
-    "pandas>=3.0.6",
-    "pytest>=8.4.2",
-    "scikit-learn>=1.9.1",
-    "wandb>=0.30.0",
-    "numpy>=2.5.4",
-    "pyyaml>=6.0.2",
+    "coppercore",
 ]
 
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13.0"]
 build-backend = "uv_build"
 
+[tool.uv]
+package = false
 
-[project.scripts]
-network-graph = "cli:graph"
-network-flatten = "cli:flatten"
+[tool.uv.sources]
+coppercore = { workspace = true }
 
+[tool.uv.workspace]
+members = [
+    "projects/*",
+    "packages/*",
+]
 
 [dependency-groups]
 dev = [
