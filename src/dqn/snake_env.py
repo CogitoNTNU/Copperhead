@@ -33,7 +33,6 @@ DIRS: dict[Action, tuple[int, int]] = {
 }
 
 DIRS_ARRAY = np.array(list(DIRS.values()))
-
 # possible states in the Q-table
 N_STATES = 2**8  # 4 danger bits + 4 apple bits
 
@@ -101,8 +100,7 @@ class Board:
         xn, yn = neighbours[:, 0], neighbours[:, 1]
 
         # mask for neighbours that lie on the board
-        W, H = self.tiles.shape
-        inside = (xn >= 0) & (xn < W) & (yn >= 0) & (yn < H)
+        inside = (xn >= 0) & (xn < self.height) & (yn >= 0) & (yn < self.width)
 
         result = np.full(4, outside, dtype=bool)
         result[inside] = self.tiles[xn[inside], yn[inside]] == tile
@@ -174,6 +172,11 @@ class SnakeEnv:
     def n_actions(self) -> int:
         """Returns the length of the action space."""
         return len(Action)
+
+    @property
+    def n_states(self) -> int:
+        """Returns the length of the action space."""
+        return N_STATES
 
     @property
     def action_space(self) -> tuple[Action, ...]:

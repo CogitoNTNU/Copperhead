@@ -8,17 +8,16 @@ obs, info = env.reset()
 env.render()
 
 for i in range(100):
-    action = Action(np.random.randint(0, 4))
+    action = np.random.randint(0, 4)
     obs, reward, terminated, truncated, info = env.step(action)
 
     time.sleep(0.5)  # sleep for 500 ms
     os.system("cls")
 
-    print(f"\n {action.name}:")
+    print(f"\n {Action(action).name}:")
     env.render()
 
     if terminated or truncated:
         break
 
 print(f"reward={reward}  terminated={terminated}  truncated={truncated}  info={info}")
-print(f"obs.shape={obs.shape}")
