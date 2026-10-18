@@ -8,19 +8,13 @@ class KristianNN:
         self.W = rng.standard_normal((input_dim, output_dim)) * 0.01
         self.b = np.zeros(output_dim)
 
-        self.x = None
-        self.Y = None
-
-        self.grad_W = None
-        self.grad_b = None
-
     def forward(self, x):
         self.x = x
         x = x @ self.W + self.b
         return (self.x @ self.W) + self.b
 
     def backward(self, grad_output):
-        self.grad_W = self.x.T @ grad_output
+        self.grad_W = self.x.T @ grad_output  # ty: ignore[unresolved-attribute]
         self.grad_b = grad_output.sum(axis=0)
         return grad_output @ self.W.T
 
