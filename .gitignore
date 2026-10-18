@@ -202,11 +202,7 @@ bower_components
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 
 # misc
 .sass-cache
@@ -252,3 +248,6 @@ lerna-debug.log
 # System Files
 .DS_Store
 Thumbs.db
+
+# Weights & Biases
+wandb/
