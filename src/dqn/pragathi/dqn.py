@@ -5,6 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from typing import Optional
+from src.dqn.snake_env import SnakeEnv, Action
 
 def make_env(
     env_name: str
@@ -28,5 +29,4 @@ def Qlearn(
     episode_reward = 0
     mean_episodic_reward = 0
     n_episodes = 0
-
     epsilon = 1.0
