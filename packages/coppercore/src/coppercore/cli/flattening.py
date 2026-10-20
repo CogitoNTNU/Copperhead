@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import yaml
-from copperhead.model_driven_nn.construction.parser import Parser
-from copperhead.model_driven_nn.construction.validator import Validator
-from copperhead.shared.types import Config
+from coppercore.model_driven_nn.construction.parser import Parser
+from coppercore.model_driven_nn.construction.validator import Validator
+from coppercore.shared import Config
 
 
 def flatten_yaml(

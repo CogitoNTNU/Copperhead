@@ -3,10 +3,10 @@ import os
 from pathlib import Path
 
 import numpy as np
-from copperhead.data import load_mnist
-from copperhead.model_driven_nn import Network
-from copperhead.model_driven_nn.construction import Loader
-from copperhead.optimizer import SGD
+from coppercore.data import load_mnist
+from coppercore.model_driven_nn import Network
+from coppercore.model_driven_nn.construction import Loader
+from coppercore.optimizer import SGD
 
 from .mnist_train import accuracy, softmax_cross_entropy_loss, train
 

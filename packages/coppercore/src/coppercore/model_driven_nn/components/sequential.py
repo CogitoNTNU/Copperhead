@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from coppercore.shared.types import FloatArray
+from coppercore.shared import FloatArray
 
 from .base import Component, Structure
 

@@ -1,5 +1,5 @@
 import numpy as np
-from src.training.mnist_train import train
+from coppercore.training.mnist_train import train
 
 from frederik.activation import ReLU
 from frederik.linear import Linear

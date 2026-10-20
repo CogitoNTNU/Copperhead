@@ -1,6 +1,6 @@
 import numpy as np
-from src.oskarNN.nn.layers import Linear, ReLu
-from src.oskarNN.nn.losses import softmax_cross_entropy
+from oskar.nn.layers import Linear, ReLu
+from oskar.nn.losses import softmax_cross_entropy
 
 
 def check_loss():

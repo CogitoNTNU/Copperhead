@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from coppercore.shared.types import FloatArray
+from coppercore.shared import FloatArray
 
 from .base import Component, Structure
 

@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from copperhead.data import load_mnist
-from src.oskarNN.nn.layers import Linear, ReLu
-from src.oskarNN.nn.losses import softmax_cross_entropy
-from src.oskarNN.nn.network import Network
-from src.oskarNN.nn.optimizer import OskarSgd
-from src.training.train_oskar.mnist_train_oskar import train
+from coppercore.data import load_mnist
+from coppercore.training.mnist_train import train
+from oskar.nn.layers import Linear, ReLu
+from oskar.nn.losses import softmax_cross_entropy
+from oskar.nn.network import Network
+from oskar.nn.optimizer import OskarSgd
 
 
 def show_prediction(network, X, y, index):

@@ -1,5 +1,5 @@
-from copperhead.data import load_mnist
-from copperhead.model_driven_nn import Network
+from coppercore.data import load_mnist
+from coppercore.model_driven_nn import Network
 
 
 def validate(network: Network, savepath="data/basic_nn_weights.npz", seed=0):
