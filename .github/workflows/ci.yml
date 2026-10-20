@@ -37,9 +37,9 @@ jobs:
           pre-commit run --all-files || true
         continue-on-error: true
 
-      - name: Install and sync dependencies
+      - name: Install and sync workspace dependencies
         run: |
-          uv sync --locked --all-extras
+          uv sync --locked --all-packages --all-extras
 
       - name: Run root tests
         run: |
