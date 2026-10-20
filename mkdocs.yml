@@ -78,14 +78,14 @@ plugins:
             summary: true
   - api-autonav:
       modules:
-        - packages/coppercore/src/
-        - packages/coppercollab/src/
-        - projects/even/src/
-        - projects/frederik/src/
-        - projects/kristian/src/
-        - projects/oskar/src/
-        - projects/pragathi/src/
-        - projects/seyon/src/
+        - packages/coppercore/src/coppercore/
+        - packages/coppercollab/src/coppercollab/
+        - projects/even/src/even/
+        - projects/frederik/src/frederik/
+        - projects/kristian/src/kristian/
+        - projects/oskar/src/oskar/
+        - projects/pragathi/src/pragathi/
+        - projects/seyon/src/seyon/
       module_options:
         package.submodule:
           docstring_style: google
