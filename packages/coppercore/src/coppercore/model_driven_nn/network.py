@@ -1,4 +1,4 @@
-from coppercore.copperhead.shared.types import FloatArray
+from coppercore.shared.types import FloatArray
 
 from .components import Structure
 from .parameter import Parameter

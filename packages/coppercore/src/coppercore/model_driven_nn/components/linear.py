@@ -1,6 +1,6 @@
 import numpy as np
 
-from coppercore.copperhead.shared.types import FloatArray
+from coppercore.shared.types import FloatArray
 
 from ..parameter import Parameter
 from .base import Layer

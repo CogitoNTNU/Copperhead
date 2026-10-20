@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
-from coppercore.copperhead.model_driven_nn.parameter import Parameter
+from coppercore.model_driven_nn.parameter import Parameter
 
 
 class Optimizer(ABC):

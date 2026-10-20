@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 
-from coppercore.copperhead.shared.types import YamlMapping
+from coppercore.shared import YamlMapping
 
 
 def positive_int(value: object, name: str) -> int:

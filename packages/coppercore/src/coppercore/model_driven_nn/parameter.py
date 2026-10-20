@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from coppercore.copperhead.shared.types import FloatArray
+from coppercore.shared.types import FloatArray
 
 
 @dataclass

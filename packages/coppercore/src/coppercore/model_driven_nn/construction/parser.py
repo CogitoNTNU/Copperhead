@@ -4,8 +4,8 @@ from pathlib import Path
 
 import yaml
 
-from coppercore.copperhead.model_driven_nn.construction.common import validate_mapping
-from coppercore.copperhead.shared.types import Config, YamlMapping
+from coppercore.model_driven_nn.construction.common import validate_mapping
+from coppercore.shared import Config, YamlMapping
 
 _REFERENCE = re.compile(r"\$\{([^{}]+)\}")
 type Lookup = Callable[[str], object]

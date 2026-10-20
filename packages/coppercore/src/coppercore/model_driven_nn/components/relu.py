@@ -1,6 +1,6 @@
 import numpy as np
 
-from coppercore.copperhead.shared.types import BoolArray, FloatArray
+from coppercore.shared.types import BoolArray, FloatArray
 
 from .base import Activation
 

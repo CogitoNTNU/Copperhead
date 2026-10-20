@@ -1,17 +1,17 @@
 from typing import Never
 
-from coppercore.copperhead.model_driven_nn.components import (
+from coppercore.model_driven_nn.components import (
     Component,
     Concat,
     Linear,
     ReLU,
     Sequential,
 )
-from coppercore.copperhead.model_driven_nn.construction.common import (
+from coppercore.model_driven_nn.construction.common import (
     positive_int,
     validate_mapping,
 )
-from coppercore.copperhead.shared.types import YamlMapping
+from coppercore.shared import YamlMapping
 
 type BuildResult = tuple[Component, int]
 

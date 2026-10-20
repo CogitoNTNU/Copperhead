@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from coppercore.copperhead.model_driven_nn.components import Structure
-from coppercore.copperhead.model_driven_nn.construction.builder import Builder
-from coppercore.copperhead.model_driven_nn.construction.common import (
+from coppercore.model_driven_nn.components import Structure
+from coppercore.model_driven_nn.construction.builder import Builder
+from coppercore.model_driven_nn.construction.common import (
     positive_int,
     validate_mapping,
 )
-from coppercore.copperhead.model_driven_nn.construction.parser import Parser
-from coppercore.copperhead.model_driven_nn.network import Network
-from coppercore.copperhead.shared.types import Config
+from coppercore.model_driven_nn.construction.parser import Parser
+from coppercore.model_driven_nn.network import Network
+from coppercore.shared import Config
 
 
 class Loader:

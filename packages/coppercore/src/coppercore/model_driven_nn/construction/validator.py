@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-from coppercore.copperhead.model_driven_nn.construction.common import (
+from coppercore.model_driven_nn.construction.common import (
     positive_int,
     validate_mapping,
 )
-from coppercore.copperhead.shared.types import YamlMapping
+from coppercore.shared import YamlMapping
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from coppercore.copperhead.shared.types import FloatArray
+from coppercore.shared.types import FloatArray
 
 from ..parameter import Parameter
 

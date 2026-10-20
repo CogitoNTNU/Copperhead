@@ -1,4 +1,4 @@
-from coppercore.copperhead.optimizer.optimizer import Optimizer
+from coppercore.optimizer.optimizer import Optimizer
 
 
 class SGD(Optimizer):
