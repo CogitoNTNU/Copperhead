@@ -1,7 +1,7 @@
 import os
 import time
 import numpy as np
-from src.dqn.snake_env import SnakeEnv, Action
+from coppercore.dqn.snake_env import SnakeEnv, Action
 
 env = SnakeEnv(width=10, height=10, seed=0)
 obs, info = env.reset()

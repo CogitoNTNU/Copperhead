@@ -96,7 +96,8 @@ class ReLU:
 
 
 class Network:
-    def __init__(self):
+    def __init__(self, name: str):
+        self.name = name
         self.input_layer = KristianLinear(784, 64)
         self.activation_layer1 = ReLU()
         self.hidden_layer1 = KristianLinear(64, 64)
