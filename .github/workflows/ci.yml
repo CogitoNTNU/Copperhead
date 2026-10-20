@@ -43,7 +43,9 @@ jobs:
 
       - name: Run root tests
         run: |
-            uv run pytest --doctest-modules --cov=src --cov-report=html
+            uv run --all-packages pytest \
+            --doctest-modules \
+            --cov=coppercore \
       
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
