@@ -337,6 +337,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
+    { name = "wandb" },
 ]
 
 [package.metadata]
@@ -345,6 +346,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.5.3" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "scikit-learn", specifier = ">=1.9.1" },
+    { name = "wandb", specifier = ">=0.31.0" },
 ]
 
 [[package]]
