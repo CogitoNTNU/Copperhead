@@ -1,0 +1,17 @@
+[project]
+name = "coppercollab"
+version = "0.0.1"
+description = "Collaborative neural network implementation for the Copperhead project."
+requires-python = ">=3.12"
+
+dependencies = [
+    "coppercore",
+    "numpy>=2.5.3",
+]
+
+[tool.uv.sources]
+coppercore = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"

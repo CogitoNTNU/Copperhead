@@ -1,6 +1,6 @@
 from coppercore.training.mnist_train import train
 
-from collab.mnist_nn import SGD, Linear, ReLU, Sequential, rng
+from coppercollab.mnist_nn import SGD, Linear, ReLU, Sequential, rng
 
 
 def main():
@@ -8,9 +8,8 @@ def main():
     optimizer = SGD(learning_rate=0.05)
 
     train(
-        nn=network,
+        network=network,
         optimizer=optimizer,
-        engine_name="collab",
     )
 
 
