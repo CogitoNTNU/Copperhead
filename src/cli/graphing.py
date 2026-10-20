@@ -4,10 +4,13 @@ import json
 import subprocess
 from pathlib import Path
 
-from model_driven_nn.construction.common import positive_int, validate_mapping
-from model_driven_nn.construction.parser import Parser
-from model_driven_nn.construction.validator import Validator
-from shared.types import Config, YamlMapping
+from copperhead.model_driven_nn.construction.common import (
+    positive_int,
+    validate_mapping,
+)
+from copperhead.model_driven_nn.construction.parser import Parser
+from copperhead.model_driven_nn.construction.validator import Validator
+from copperhead.shared.types import Config, YamlMapping
 
 
 def graph_yaml(
