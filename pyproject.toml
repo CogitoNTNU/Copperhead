@@ -36,7 +36,7 @@ network-flatten = "cli:flatten"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.6.2",
+    "pre-commit>=4.7.0",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
 ]
