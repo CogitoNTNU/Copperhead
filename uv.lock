@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -15,6 +15,7 @@ members = [
     "frederik",
     "kristian",
     "oskar",
+    "oskar-kristian",
     "pragathi",
     "seyon",
 ]
@@ -1487,6 +1488,23 @@ wheels = [
 name = "oskar"
 version = "0.0.1"
 source = { editable = "projects/oskar" }
+dependencies = [
+    { name = "coppercore" },
+    { name = "matplotlib" },
+    { name = "wandb" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "coppercore", editable = "packages/coppercore" },
+    { name = "matplotlib", specifier = ">=3.11.2" },
+    { name = "wandb", specifier = ">=0.30.0" },
+]
+
+[[package]]
+name = "oskar-kristian"
+version = "0.0.1"
+source = { editable = "projects/ok_DQN" }
 dependencies = [
     { name = "coppercore" },
     { name = "matplotlib" },
