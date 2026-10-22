@@ -77,7 +77,15 @@ plugins:
             show_symbol_type_toc: true
             summary: true
   - api-autonav:
-      modules: ['src/']
+      modules:
+        - packages/coppercore/src/coppercore/
+        - packages/coppercollab/src/coppercollab/
+        - projects/even/src/even/
+        - projects/frederik/src/frederik/
+        - projects/kristian/src/kristian/
+        - projects/oskar/src/oskar/
+        - projects/pragathi/src/pragathi/
+        - projects/seyon/src/seyon/
       module_options:
         package.submodule:
           docstring_style: google
