@@ -1,6 +1,6 @@
 from src.dqn.snake_env import SnakeEnv
-from src.OK_dqn.agent.q_agent import QAgent
-from src.OK_dqn.OK_harness import train
+from projects.OK_dqn.agent.q_agent import QAgent
+from projects.OK_dqn.OK_harness import train
 
 
 def make_snake_env():

@@ -1,4 +1,4 @@
-from src.OK_dqn.agent.random_agent import RandomAgent
+from projects.OK_dqn.agent.random_agent import RandomAgent
 from src.OK_dqn.env.cart_pole import make_cart_pole
 from src.training.dqn_harness import train
 
