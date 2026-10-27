@@ -8,7 +8,7 @@ class RandomAgent:
         self.params = {}
 
     def act(self, obs: np.ndarray, greedy: bool = False) -> int:
-        return self.rng.integers(self.action_space.n)
+        return self.rng.integers(self.action_space)
 
     def observe(self, obs, action, reward, next_obs, terminated) -> dict | None:
         return {"last_action": action}

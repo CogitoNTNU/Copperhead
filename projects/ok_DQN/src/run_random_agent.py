@@ -12,4 +12,4 @@ n_actions = env.n_actions
 n_states = env.n_states
 
 random = RandomAgent(n_actions)
-train(random, make_snake_env, 10000, group="OK", name="OK")
+train(random, make_snake_env, 150_000, group="OK", name="OK-random")

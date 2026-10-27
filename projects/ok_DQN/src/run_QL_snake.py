@@ -16,9 +16,10 @@ ql_agent = QAgent(n_states, n_actions)
 train(
     ql_agent,
     make_snake_env,
-    150_000,
+    1_500_000,
     eval_every=2_000,
-    name="OK",
+    group="OK",
+    name="OK-ql",
     config={
         "alpha": ql_agent.alpha,
         "gamma": ql_agent.gamma,
