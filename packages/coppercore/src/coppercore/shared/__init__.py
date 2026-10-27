@@ -1,3 +1,4 @@
+from .formatting import format_number
 from .types import BoolArray, Config, FloatArray, IntArray, YamlMapping
 
 __all__ = [
@@ -6,4 +7,5 @@ __all__ = [
     "FloatArray",
     "IntArray",
     "YamlMapping",
+    "format_number",
 ]
