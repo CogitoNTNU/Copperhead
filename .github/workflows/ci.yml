@@ -37,13 +37,15 @@ jobs:
           pre-commit run --all-files || true
         continue-on-error: true
 
-      - name: Install and sync dependencies
+      - name: Install and sync workspace dependencies
         run: |
-          uv sync --locked --all-extras
+          uv sync --locked --all-packages --all-extras
 
       - name: Run root tests
         run: |
-            uv run pytest --doctest-modules --cov=src --cov-report=html
+            uv run --all-packages pytest \
+            --doctest-modules \
+            --cov=coppercore \
       
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
@@ -71,7 +73,7 @@ jobs:
             enable-cache: true
       - name: Install and sync dependencies
         run: |
-          uv sync --group=docs --locked
+          uv sync --locked --all-packages --group docs
           
       - name: Configure Git Credentials
         run: |
@@ -81,7 +83,8 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
-      - run: uv run mkdocs gh-deploy --force
+      - run:
+          uv run --locked --all-packages --group docs mkdocs gh-deploy --force
 
   dependabot:
     name: 'Dependabot'
