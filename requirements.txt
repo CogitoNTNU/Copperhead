@@ -240,9 +240,9 @@ coverage==7.16.2 \
     --hash=sha256:fb2bde05838fffae1a1bf75e5d411a6cac3e4e9bb97e6640fed8cd47888b33f0 \
     --hash=sha256:fb9d92ecfe2d5b494367c67f7446f8b75b68d8d0c8cf3bc3e6997478be25d9e2 \
     --hash=sha256:fd3d72233eb8b48acc94fa57d44e2d32ce8e7abed02882ccb6d855ccc4ed33ec
-cwevals==0.0.1b1 \
-    --hash=sha256:2ae997369ff44941925e4db1bd07eb4e13c05de412e615636fd12881d63f8a13 \
-    --hash=sha256:6936baf0ccdc5d9092abd5c2ab628cedcdae9bb72edfdf730f7aaac19118855a
+cwevals==0.0.1b2 \
+    --hash=sha256:35b7bb2634c23840d6fb4a6910f0b2d524987f824c5a501a15220863e1c85ba9 \
+    --hash=sha256:ef20c124956af90846cca3181bbe1a7504b9231ed86a83ef748103726ac19bb2
 decorator==5.3.1 \
     --hash=sha256:4cbcdd55a6efadb9dbea26b858f4fb3264567b52d69ca0d25b721b553f60ea82 \
     --hash=sha256:f47fe6fdbd2edd623ecfe36875d37aba411624e2670dd395dddae1358689bb3c
