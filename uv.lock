@@ -21,8 +21,8 @@ members = [
     "even",
     "frederik",
     "kristian",
+    "ok-dqn",
     "oskar",
-    "oskar-kristian",
     "pragathi",
     "seyon",
 ]
@@ -1442,6 +1442,23 @@ wheels = [
 ]
 
 [[package]]
+name = "ok-dqn"
+version = "0.0.1"
+source = { editable = "projects/ok_DQN" }
+dependencies = [
+    { name = "coppercore" },
+    { name = "matplotlib" },
+    { name = "wandb" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "coppercore", editable = "packages/coppercore" },
+    { name = "matplotlib", specifier = ">=3.11.2" },
+    { name = "wandb", specifier = ">=0.30.0" },
+]
+
+[[package]]
 name = "opentelemetry-api"
 version = "1.45.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1557,23 +1574,6 @@ wheels = [
 name = "oskar"
 version = "0.0.1"
 source = { editable = "projects/oskar" }
-dependencies = [
-    { name = "coppercore" },
-    { name = "matplotlib" },
-    { name = "wandb" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "coppercore", editable = "packages/coppercore" },
-    { name = "matplotlib", specifier = ">=3.11.2" },
-    { name = "wandb", specifier = ">=0.30.0" },
-]
-
-[[package]]
-name = "oskar-kristian"
-version = "0.0.1"
-source = { editable = "projects/ok_DQN" }
 dependencies = [
     { name = "coppercore" },
     { name = "matplotlib" },

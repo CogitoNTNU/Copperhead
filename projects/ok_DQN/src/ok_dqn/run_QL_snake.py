@@ -1,6 +1,6 @@
 from packages.coppercore.src.coppercore.training.dqn_harness import train
 from packages.coppercore.src.coppercore.dqn.snake_env import SnakeEnv
-from projects.ok_DQN.src.agent.Q_agent import QAgent
+from projects.ok_DQN.src.ok_DQN.agent.Q_agent import QAgent
 
 
 def make_snake_env():
