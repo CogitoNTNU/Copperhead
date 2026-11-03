@@ -3,7 +3,7 @@ from coppercore.training.mnist_train import train
 
 from frederik.activation import ReLU
 from frederik.linear import Linear
-from frederik.model import Sequential
+from frederik.network import Sequential
 from frederik.optimizer import AdaGrad
 
 

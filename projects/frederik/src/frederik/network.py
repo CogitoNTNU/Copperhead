@@ -1,4 +1,4 @@
-from frederik.module import Module
+from frederik.module import Module, Parameter
 
 
 class Sequential(Module):
@@ -21,5 +21,9 @@ class Sequential(Module):
 
         return out
 
-    def params(self):
+    def params(self) -> Parameter:
         return [p for m in self.modules for p in m.params()]
+
+    def zero_grad(self) -> None:
+        for param in self.params():
+            param.zero_grad()
