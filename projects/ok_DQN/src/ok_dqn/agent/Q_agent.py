@@ -2,10 +2,17 @@ import numpy as np
 
 
 class QAgent:
+<<<<<<<< HEAD:projects/ok_DQN/src/agent/Q_agent.py
     def __init__(self, n_states, n_actions, seed=0, alpha=0.05, gamma=0.95):
         self.rng = np.random.default_rng(seed)
         self.epsilon = 1
         self.epsilon_decay = 0.998
+========
+    def __init__(self, n_states, n_actions, seed=0, alpha=0.05, gamma=0.99):
+        self.rng = np.random.default_rng(seed)
+        self.epsilon = 1
+        self.epsilon_decay = 0.9995
+>>>>>>>> origin/main:projects/ok_DQN/src/ok_dqn/agent/Q_agent.py
         self.epsilon_min = 0.01
         self.alpha = alpha
         self.gamma = gamma
