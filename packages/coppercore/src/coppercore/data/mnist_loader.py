@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-cache_path = Path(__file__).resolve().parents[2] / "data" / "mnist.npz"
+cache_path = Path(__file__).resolve().parents[5] / "data" / "mnist.npz"
 
 
 def download_and_cache():
