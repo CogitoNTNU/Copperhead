@@ -1,7 +1,8 @@
+from collections import deque
+from enum import Enum, IntEnum, auto
+
 import numpy as np
 import numpy.typing as npt
-from enum import Enum, IntEnum, auto
-from collections import deque
 
 
 class Tile(IntEnum):
@@ -85,9 +86,7 @@ class Board:
         """Checks if the given position is inside the board."""
         pos_y, pos_x = pos
 
-        if pos_y < 0 or pos_y > self.height - 1:
-            return False
-        elif pos_x < 0 or pos_x > self.width - 1:
+        if pos_y < 0 or pos_y > self.height - 1 or pos_x < 0 or pos_x > self.width - 1:
             return False
 
         return True
