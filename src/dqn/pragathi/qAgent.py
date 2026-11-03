@@ -58,7 +58,7 @@ class QLearningAgent:
         }
 
     def decay_epsilon(self):
-        self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
+        self.epsilon = max(self.final_epsilon, self.epsilon - (0.5 * self.epsilon_decay))
 
 def make_env():
     env = SnakeEnv(width=10, height=10, seed=0)
@@ -66,12 +66,11 @@ def make_env():
     return env
 
 def main():
-    learning_rate = 0.01
+    learning_rate = 0.1
+    n_episodes = 10_000
     start_epsilon = 0.9
-    n_steps = 50_000
-    final_epsilon = 0.02
-    epsilon_decay = (start_epsilon - final_epsilon) / (n_steps / 2)
-
+    epsilon_decay = start_epsilon / (n_episodes / 2)
+    final_epsilon = 0.2
 
     env = make_env()
     agent = QLearningAgent(
