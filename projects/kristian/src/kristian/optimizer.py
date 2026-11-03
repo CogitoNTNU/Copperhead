@@ -1,7 +1,10 @@
-class KristianSgd:
-    def __init__(self, learning_rate=0.1):
-        self.learning_rate = learning_rate
+from coppercore.optimizer.optimizer import Optimizer
 
-    def step(self, params):
-        for parameter, gradient in params:
-            parameter -= self.learning_rate * gradient
+
+class KristianSgd(Optimizer):
+    def __init__(self, learning_rate: float = 0.1) -> None:
+        super().__init__(learning_rate)
+
+    def step(self) -> None:
+        for parameter in self.parameters:
+            parameter.data -= self.learning_rate * parameter.grad
