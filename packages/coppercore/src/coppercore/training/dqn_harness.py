@@ -95,7 +95,7 @@ def train(
             episode_return, episode_length = 0.0, 0
 
         # log the agent's data (latest value, use smoothing in WandB for noisy curves)
-        if metrics and step % log_every == 0:
+        if metrics is not None and step % log_every == 0:
             run.log({f"agent/{k}": v for k, v in metrics.items()}, step=step)
 
         # evaluate agent occasionally, and keep the best version

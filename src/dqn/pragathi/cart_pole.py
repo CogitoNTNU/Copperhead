@@ -1,8 +1,6 @@
 from collections import defaultdict
-
 import gymnasium as gym
 import numpy as np
-
 
 class CartPoleAgent:
     def __init__(
