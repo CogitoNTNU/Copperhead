@@ -52,6 +52,7 @@ def train(
     name=None,
     log_every=1_000,
     eval_every=10_000,
+    make_video_env: Callable | None = None,
 ):
     """Train the agent for n_steps environment steps and log everything to WandB."""
 
@@ -68,6 +69,12 @@ def train(
     obs, info = env.reset(seed=seed)
     episode_return, episode_length = 0.0, 0
     best_eval = float("-inf")
+
+    # an env with render_mode="rgb_array", used to record a gif at every evaluation
+    if make_video_env is not None:
+        from coppercore.dqn.snake_render import log_episode_gif, record_episode
+
+        video_env = make_video_env()
 
     for step in range(1, n_steps + 1):
         # choose an action (with exploration)
@@ -107,6 +114,21 @@ def train(
                 best_eval = result["return_mean"]
                 np.savez(f"{run.dir}/best.npz", **getattr(agent, "params", {}))
                 run.summary["best_eval_return"] = best_eval
+
+                # record the best agent now, the gif is logged once after training
+                if make_video_env is not None:
+                    best_frames, stats = record_episode(
+                        video_env, lambda o: agent.act(o, greedy=True), seed=10_000
+                    )
+                    best_caption = (
+                        f"step={step} len={stats['length']} "
+                        f"return={stats['return']:.1f}"
+                    )
+
+    if make_video_env is not None:
+        log_episode_gif(
+            run, best_frames, n_steps, key="eval/best_episode", caption=best_caption
+        )
 
     # upload the best weights as a WandB artifact
     artifact = wandb.Artifact(f"agent-{run.id}", type="model")

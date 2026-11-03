@@ -1,4 +1,5 @@
 import numpy as np
+from coppercore.model_driven_nn.parameter import Parameter
 
 seed = 0
 rng = np.random.default_rng(seed)
@@ -12,10 +13,10 @@ class KristianLinear:
 
         # use kaiming init to prevent dying relus
         # this init preserves variance across relu layers and has a mean of zero
-        self.W = rng.normal(
-            0, np.sqrt(2 / in_features), size=(in_features, out_features)
+        self.W = Parameter.from_data(
+            rng.normal(0, np.sqrt(2 / in_features), size=(in_features, out_features))
         )
-        self.b = np.zeros(out_features)
+        self.b = Parameter.from_data(np.zeros(out_features))
 
         self.x = None
         self.Y = None
@@ -32,7 +33,7 @@ class KristianLinear:
 
         x * w = batch,out
         """
-        return (self.x @ self.W) + self.b
+        return (self.x @ self.W.data) + self.b.data
 
     def backward(self, grad_output: np.ndarray) -> np.ndarray:
         """
@@ -42,7 +43,7 @@ class KristianLinear:
         and dl/dz = grad_output
         (in_features, out_features)= (batch_size, input_features) T * (batch_size, out_features)
         """
-        self.grad_W = self.x.T @ grad_output
+        self.W.grad = self.x.T @ grad_output
 
         """
         dL/db = dL/da * da/dz * dz/db
@@ -53,7 +54,7 @@ class KristianLinear:
         so here we end up with a sum over all the grad outputs multiplied by one. Sum over all the rows. collapsing the batch dimention
         """
 
-        self.grad_b = np.sum(grad_output, axis=0)  # (batch,out)
+        self.b.grad = np.sum(grad_output, axis=0)  # (batch,out)
 
         """
         although what we previously computed and stored were dl/dw and dl/db this is not actially what we want to return.
@@ -70,11 +71,11 @@ class KristianLinear:
         we wanbt dl/dx to have shape (batch,in), same as x
         so we do grad * w^T
         """
-        return grad_output @ self.W.T
+        return grad_output @ self.W.data.T
 
     def params(self) -> list:
         # class exists to return gradients weights and biases to optimizer and train
-        return [(self.W, self.grad_W), (self.b, self.grad_b)]
+        return [self.W, self.b]
 
 
 class ReLU:
@@ -135,3 +136,10 @@ class Network:
                 pair.append[layer.params()]
         """
         return params
+
+    def predict(self, x: np.ndarray) -> np.ndarray:
+        return self.forward(x)
+
+    def zero_grad(self) -> None:
+        for p in self.params():
+            p.zero_grad()
