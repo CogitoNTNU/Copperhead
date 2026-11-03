@@ -1,6 +1,8 @@
-from typing import Callable, Protocol
+from collections.abc import Callable
+from typing import Protocol
 
 import numpy as np
+
 import wandb
 
 
