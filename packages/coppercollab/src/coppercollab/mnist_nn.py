@@ -25,13 +25,29 @@ def default_init(rng: np.random.Generator, shape: tuple, lim) -> np.ndarray:
     return rng.uniform(-lim, lim, shape)
 
 
+def kaiming_init(rng: np.random.Generator, shape: tuple, lim) -> np.ndarray:
+    in_features = shape[1]
+    std = np.sqrt(2.0 / in_features)
+    return rng.normal(0.0, std, shape)
+
+
 class Linear(Module):
-    def __init__(self, in_features: int, out_features: int, rng: np.random.Generator):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        rng: np.random.Generator,
+        kaiming: bool = False,
+    ):
         w_shape = (out_features, in_features)
         b_shape = (out_features,)
 
-        self.weight = Parameter(default_init(rng, w_shape, 1))
-        self.bias = Parameter(default_init(rng, b_shape, 1))
+        if kaiming:
+            self.weight = Parameter(kaiming_init(rng, w_shape, 1))
+            self.bias = Parameter(np.zeros(b_shape))
+        else:
+            self.weight = Parameter(default_init(rng, w_shape, 1))
+            self.bias = Parameter(default_init(rng, b_shape, 1))
 
         self.x = None
 
