@@ -12,7 +12,7 @@ n_actions = env.action_space.n
 state_dim = env.observation_space.shape[0]
 
 dqn_agent = DQNAgent(
-    action_space=n_actions, state_dim=state_dim, buffer_size=10_000, sample_size=32
+    action_space=n_actions, state_dim=state_dim, buffer_size=10_000, sample_size=64
 )
 
 train(

@@ -11,24 +11,26 @@ rng = np.random.default_rng(seed=0)
 
 
 class DQNAgent:
-    def __init__(self, state_dim, action_space, buffer_size, sample_size):
+    def __init__(
+        self, state_dim, action_space, buffer_size, sample_size, decay_eps=0.0995
+    ):
         self.eps = 1
-        self.decay_eps = 0.99
+        self.decay_eps = decay_eps
         self.action_space = action_space
         self.replay_buffer = deque(maxlen=buffer_size)
-        self.c = 100  # steps requiered to update self.c
+        self.c = 400  # steps requiered to update self.c
         self.sample_size = sample_size
         self.buffer_size = buffer_size
         self.total_steps = 0  # to coun
-        self.gamma = 0.95
+        self.gamma = 0.99
 
         self.optimizer = ADAM(learning_rate=0.001)
         self.network = Sequential(
-            Linear(state_dim, 128, rng),
+            Linear(state_dim, 128, rng, kaiming=True),
             ReLU(),
-            Linear(128, 128, rng),
+            Linear(128, 128, rng, kaiming=True),
             ReLU(),
-            Linear(128, action_space, rng),
+            Linear(128, action_space, rng, kaiming=True),
         )
         self.optimizer.parameters = self.network.params()
         # here we need deepcopy because sequential references other objects
@@ -47,7 +49,7 @@ class DQNAgent:
         self.total_steps += 1
 
         self.save_transition(state, action, reward, next_state, terminated)
-        self.gradient_step()
+        metrics = self.gradient_step()
 
         if self.total_steps % self.c == 0:
             self.copy_weights()
@@ -55,7 +57,7 @@ class DQNAgent:
         if terminated:
             self.eps = max(0.01, self.eps * self.decay_eps)
         # decay exploration epsilon
-        pass
+        return metrics
 
     """Helper functions"""
 
@@ -97,6 +99,15 @@ class DQNAgent:
         loss, grad = self.mse_loss(Q, target_Q)
         self.network.backward(grad)
         self.optimizer.step()
+
+        # logging
+        log = {
+            "loss": float(loss),
+            "mean_q": float(np.mean(Q)),
+            "max_q": float(np.max(Q)),
+            "eps": float(self.eps),
+        }
+        return log
 
     def sample_minibatch(self) -> np.ndarray | None:
         # guard against sampling when not filled
