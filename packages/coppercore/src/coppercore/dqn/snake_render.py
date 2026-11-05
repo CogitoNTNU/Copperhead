@@ -3,12 +3,12 @@ import os
 # headless rendering, so it also runs on servers and clusters without a display
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pygame
-import wandb
 
+import wandb
 from coppercore.dqn.snake_env import SnakeEnv, Tile
 
 
