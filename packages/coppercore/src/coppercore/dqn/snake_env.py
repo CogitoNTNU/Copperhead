@@ -207,34 +207,124 @@ class SnakeEnv:
         bits = np.concatenate([dangers_nearby, apple_dir])
         return int(bits @ (1 << np.arange(bits.size)))
 
-    def get_obs(self) -> np.ndarray:
-        """Head-centered 5x5-window filter w.r.t. dangers, apples and direction to apple."""
-        R = self.obs_window_radius
+    @property
+    def obs_dim(self) -> int:
+        """Length of the vector returned by get_obs."""
+        window_size = (2 * self.obs_window_radius + 1) ** 2
+
+        # danger and apple windows, apple and snake direction, area and tail per action, length
+        return 2 * window_size + 2 + 2 + 2 * len(Action) + 1
+
+    def _free_components(self) -> tuple[np.ndarray, list[int]]:
+        """Labels connected free regions (empty, apple and the tail, which moves away)."""
         tiles = self.board.tiles
-        ((hy, hx),) = np.argwhere(tiles == Tile.HEAD)
+        free = (tiles == Tile.EMPTY) | (tiles == Tile.APPLE)
+        free[self.board.body[-1]] = True
 
-        padded = np.pad(
-            tiles, R, constant_values=Tile.WALL
-        )  # values outside board count as wall
-        win = padded[hy : hy + 2 * R + 1, hx : hx + 2 * R + 1]  # head in center
+        h, w = tiles.shape
+        labels = np.zeros((h, w), dtype=np.int32)  # 0 = not free
+        sizes = [0]
+        for sy, sx in np.argwhere(free):
+            if labels[sy, sx]:
+                continue
+            label = len(sizes)
+            labels[sy, sx] = label
+            stack, size = [(sy, sx)], 0
+            while stack:
+                y, x = stack.pop()
+                size += 1
+                for dy, dx in DIRS_ARRAY:
+                    ny, nx = y + dy, x + dx
+                    if (
+                        0 <= ny < h
+                        and 0 <= nx < w
+                        and free[ny, nx]
+                        and not labels[ny, nx]
+                    ):
+                        labels[ny, nx] = label
+                        stack.append((ny, nx))
+            sizes.append(size)
+        return labels, sizes
 
-        dangers = (win == Tile.BODY) | (win == Tile.WALL)
-        apples = win == Tile.APPLE
+    def get_obs(self) -> np.ndarray:
+        """
+        Head-centered window plus global features that help avoid self-trapping:
+        - window danger: walls = 1, body parts = fraction of steps until they move away
+        - window apples
+        - direction to apple and snake direction
+        - per action: reachable free area after the move (fraction of all free cells)
+        - per action: whether the tail is reachable after the move
+        - snake length as a fraction of the board
+        """
+        snake_length = len(self.board.body)
 
-        apple_pos = np.argwhere(tiles == Tile.APPLE)
-        apple_dir = (
-            np.sign(apple_pos[0] - (hy, hx)) if len(apple_pos) else np.zeros(2)
-        ).astype(np.float32)
+        # outside the board counts as wall
+        danger_window = self._window(self._danger_map(), outside=1.0)
+        apple_window = self._window(self.board.tiles == Tile.APPLE, outside=False)
 
-        snake_dir = self.board.direction
+        free_area, tail_reachable = self._space_after_moves()
 
         return np.concatenate(
             [
-                np.stack([dangers, apples]).astype(np.float32).ravel(),
-                apple_dir,
-                snake_dir,
+                danger_window.ravel(),
+                apple_window.ravel(),
+                self._apple_direction(),
+                self.board.direction,
+                free_area,
+                tail_reachable,
+                [snake_length / (self.width * self.height)],
             ]
-        )
+        ).astype(np.float32)
+
+    def _window(self, grid: npt.NDArray, outside: float) -> npt.NDArray:
+        """Returns the square around the head, with tiles outside the board set to outside."""
+        radius = self.obs_window_radius
+        size = 2 * radius + 1
+        head_y, head_x = self.board.head
+
+        # after padding, the window starting at the head has the head in its center
+        padded = np.pad(grid, radius, constant_values=outside)
+        return padded[head_y : head_y + size, head_x : head_x + size]
+
+    def _danger_map(self) -> npt.NDArray[np.float32]:
+        """Returns the board with each body part as the fraction of steps until it moves away."""
+        body = np.array(self.board.body)
+        length = len(body)
+
+        # body part i (head = 0) leaves its tile after length - i steps
+        danger = np.zeros(self.board.tiles.shape, dtype=np.float32)
+        danger[body[:, 0], body[:, 1]] = (length - np.arange(length)) / length
+        return danger
+
+    def _apple_direction(self) -> npt.NDArray:
+        """Returns the sign of (dy, dx) from the head to the apple."""
+        apples = np.argwhere(self.board.tiles == Tile.APPLE)
+
+        if len(apples) == 0:  # board full, no apple
+            return np.zeros(2)
+
+        return np.sign(apples[0] - np.array(self.board.head))
+
+    def _space_after_moves(self) -> tuple[npt.NDArray, npt.NDArray]:
+        """Returns, per action, the free area after the move and if the tail is reachable."""
+        labels, sizes = self._free_components()
+        n_free = max(1, sum(sizes))
+        tail_label = labels[self.board.body[-1]]
+
+        free_area = np.zeros(len(Action), dtype=np.float32)
+        tail_reachable = np.zeros(len(Action), dtype=np.float32)
+
+        for action in Action:
+            new_pos = self.board.next_pos(action)
+
+            # moving into a wall or the body leaves no space
+            if not self.board.in_bounds(new_pos) or labels[new_pos] == 0:
+                continue
+
+            free_area[action] = sizes[labels[new_pos]] / n_free
+            tail_reachable[action] = labels[new_pos] == tail_label
+
+        return free_area, tail_reachable
 
     def step(self, action: int) -> tuple[tuple[np.ndarray], float, bool, bool, dict]:
         """Takes one action and returns (obs, reward, terminated, truncated, info)."""
