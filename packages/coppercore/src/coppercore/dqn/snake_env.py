@@ -1,11 +1,11 @@
-from collections import deque
-from enum import Enum, IntEnum, auto
-
 import numpy as np
 import numpy.typing as npt
+from enum import Enum, IntEnum, auto
+from collections import deque
 
 
 class Tile(IntEnum):
+    WALL = -1
     EMPTY = 0
     APPLE = 1
     BODY = 2
@@ -86,7 +86,9 @@ class Board:
         """Checks if the given position is inside the board."""
         pos_y, pos_x = pos
 
-        if pos_y < 0 or pos_y > self.height - 1 or pos_x < 0 or pos_x > self.width - 1:
+        if pos_y < 0 or pos_y > self.height - 1:
+            return False
+        elif pos_x < 0 or pos_x > self.width - 1:
             return False
 
         return True
@@ -152,19 +154,21 @@ class SnakeEnv:
         max_steps_no_food: int = 100,
         rewards=None,
         obs_mode: str = "state",
+        obs_window_radius: int = 2,
     ):
         self.width = width
         self.height = height
         self.snake_length = 3
         self.max_steps_no_food = max_steps_no_food
         self.rewards = rewards or {
-            Event.MOVED: 0.0,
-            Event.ATE: 1.0,
+            Event.MOVED: -0.01,
+            Event.ATE: 2.0,
             Event.DIED: -1.0,
             Event.WON: 1.0,
         }
         self.rng = np.random.default_rng(seed)
         self.obs_mode = obs_mode
+        self.obs_window_radius = obs_window_radius
         self.board = None
 
     @property
@@ -204,13 +208,32 @@ class SnakeEnv:
         return int(bits @ (1 << np.arange(bits.size)))
 
     def get_obs(self) -> np.ndarray:
-        """Returns the board as a flat float vector for the network."""
+        """Head-centered 5x5-window filter w.r.t. dangers, apples and direction to apple."""
+        R = self.obs_window_radius
         tiles = self.board.tiles
-        # divide board in 3 channels, with 1 as indicator, and flatten to one float vector
-        return (
-            np.stack([tiles == Tile.BODY, tiles == Tile.HEAD, tiles == Tile.APPLE])
-            .astype(np.float32)
-            .ravel()
+        ((hy, hx),) = np.argwhere(tiles == Tile.HEAD)
+
+        padded = np.pad(
+            tiles, R, constant_values=Tile.WALL
+        )  # values outside board count as wall
+        win = padded[hy : hy + 2 * R + 1, hx : hx + 2 * R + 1]  # head in center
+
+        dangers = (win == Tile.BODY) | (win == Tile.WALL)
+        apples = win == Tile.APPLE
+
+        apple_pos = np.argwhere(tiles == Tile.APPLE)
+        apple_dir = (
+            np.sign(apple_pos[0] - (hy, hx)) if len(apple_pos) else np.zeros(2)
+        ).astype(np.float32)
+
+        snake_dir = self.board.direction
+
+        return np.concatenate(
+            [
+                np.stack([dangers, apples]).astype(np.float32).ravel(),
+                apple_dir,
+                snake_dir,
+            ]
         )
 
     def step(self, action: int) -> tuple[tuple[np.ndarray], float, bool, bool, dict]:
@@ -228,7 +251,7 @@ class SnakeEnv:
         next_obs = self.observe()
         reward = self.rewards[event]
 
-        info = {"length": len(self.board.body)}
+        info = {"score": len(self.board.body)}
 
         return next_obs, reward, terminated, truncated, info
 
