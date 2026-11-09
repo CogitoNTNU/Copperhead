@@ -1,7 +1,9 @@
+from collections import deque
+from enum import Enum, IntEnum, auto
+
 import numpy as np
 import numpy.typing as npt
-from enum import Enum, IntEnum, auto
-from collections import deque
+from scipy.ndimage import label
 
 
 class Tile(IntEnum):
@@ -215,38 +217,7 @@ class SnakeEnv:
         # danger and apple windows, apple and snake direction, area and tail per action, length
         return 2 * window_size + 2 + 2 + 2 * len(Action) + 1
 
-    def _free_components(self) -> tuple[np.ndarray, list[int]]:
-        """Labels connected free regions (empty, apple and the tail, which moves away)."""
-        tiles = self.board.tiles
-        free = (tiles == Tile.EMPTY) | (tiles == Tile.APPLE)
-        free[self.board.body[-1]] = True
-
-        h, w = tiles.shape
-        labels = np.zeros((h, w), dtype=np.int32)  # 0 = not free
-        sizes = [0]
-        for sy, sx in np.argwhere(free):
-            if labels[sy, sx]:
-                continue
-            label = len(sizes)
-            labels[sy, sx] = label
-            stack, size = [(sy, sx)], 0
-            while stack:
-                y, x = stack.pop()
-                size += 1
-                for dy, dx in DIRS_ARRAY:
-                    ny, nx = y + dy, x + dx
-                    if (
-                        0 <= ny < h
-                        and 0 <= nx < w
-                        and free[ny, nx]
-                        and not labels[ny, nx]
-                    ):
-                        labels[ny, nx] = label
-                        stack.append((ny, nx))
-            sizes.append(size)
-        return labels, sizes
-
-    def get_obs(self) -> np.ndarray:
+    def get_obs(self) -> npt.NDArray:
         """
         Head-centered window plus global features that help avoid self-trapping:
         - window danger: walls = 1, body parts = fraction of steps until they move away
@@ -305,28 +276,65 @@ class SnakeEnv:
 
         return np.sign(apples[0] - np.array(self.board.head))
 
-    def _space_after_moves(self) -> tuple[npt.NDArray, npt.NDArray]:
-        """Returns, per action, the free area after the move and if the tail is reachable."""
-        labels, sizes = self._free_components()
-        n_free = max(1, sum(sizes))
-        tail_label = labels[self.board.body[-1]]
+    def _space_after_moves(
+        self,
+    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+        """
+        Simulates each action one step ahead and returns, per action:
+        - the size of the largest free region next to the new head (fraction of all free tiles)
+        - whether the tail can be reached from the new head (1.0 or 0.0)
+        Actions that kill the snake or lead into a dead end get 0 for both.
+        """
+        tiles, body = self.board.tiles, self.board.body
+        tail = body[-1]
 
-        free_area = np.zeros(len(Action), dtype=np.float32)
-        tail_reachable = np.zeros(len(Action), dtype=np.float32)
+        # tiles the snake can move onto right now
+        free_now = (tiles == Tile.EMPTY) | (tiles == Tile.APPLE)
+        # +1 for the tail tile, which is freed when the snake moves
+        n_free = max(1, int(free_now.sum()) + 1)
+
+        free_area = np.zeros(len(Action), np.float32)
+        tail_reachable = np.zeros(len(Action), np.float32)
 
         for action in Action:
-            new_pos = self.board.next_pos(action)
+            new_head = self.board.next_pos(action)
+            if not self.board.in_bounds(new_head):
+                continue  # hits the wall
 
-            # moving into a wall or the body leaves no space
-            if not self.board.in_bounds(new_pos) or labels[new_pos] == 0:
-                continue
+            eats = tiles[new_head] == Tile.APPLE
 
-            free_area[action] = sizes[labels[new_pos]] / n_free
-            tail_reachable[action] = labels[new_pos] == tail_label
+            # the tail moves away unless the snake eats
+            free = free_now.copy()
+            if not eats:
+                free[tail] = True
+            if not free[new_head]:
+                continue  # hits its own body
+            free[new_head] = False
+
+            # the tail moves away on the next step too, so count it as free
+            new_tail = tail if eats else body[-2]
+            free[new_tail] = True
+
+            # label the connected free regions and find those touching the new head
+            regions, _ = label(free)
+            region_sizes = np.bincount(regions.ravel())
+            adjacent = self._adjacent_regions(regions, new_head)
+            if not adjacent:
+                continue  # dead end
+
+            free_area[action] = max(region_sizes[r] for r in adjacent) / n_free
+            tail_reachable[action] = regions[new_tail] in adjacent
 
         return free_area, tail_reachable
 
-    def step(self, action: int) -> tuple[tuple[np.ndarray], float, bool, bool, dict]:
+    def _adjacent_regions(self, regions: npt.NDArray, pos: tuple[int, int]) -> set[int]:
+        """Returns the labels of the free regions bordering pos (label 0 means not free)."""
+        neighbours = map(tuple, np.array(pos) + DIRS_ARRAY)
+        return {
+            regions[n] for n in neighbours if self.board.in_bounds(n) and regions[n] > 0
+        }
+
+    def step(self, action: int) -> tuple[tuple[npt.NDArray], float, bool, bool, dict]:
         """Takes one action and returns (obs, reward, terminated, truncated, info)."""
         event = self.board.move(Action(action))
 
@@ -337,7 +345,7 @@ class SnakeEnv:
         else:
             self.steps_no_food += 1
 
-        truncated = self.steps_no_food >= self.max_steps_no_food
+        truncated = self.steps_no_food >= self.max_steps_no_food + len(self.board.body)
         next_obs = self.observe()
         reward = self.rewards[event]
 

@@ -37,19 +37,21 @@ class DQNAgent(BaseAgent):
 
         # Exploration parameters
         self.max_epsilon = 1.0
-        self.min_epsilon = 0.05
-        self.eps_decay_steps = 50_000
+        self.min_epsilon = 0.01
+        self.eps_decay_steps = 400_000
 
         # Q update parameters
-        self.gamma = 0.95
+        self.gamma = 0.99
         self.steps = 0
 
         # Buffer and batching
         self.n_train_start = 2000
         self.n_target_start = 1000
+        self.train_freq = 4
+
         self.batch_size = 100
         self.replay_buffer = ReplayBuffer(
-            capacity=50_000, obs_shape=(obs_dim,), obs_dtype=np.float32
+            capacity=self.eps_decay_steps, obs_shape=(obs_dim,), obs_dtype=np.float32
         )
 
         self.Q_policy = Network(
@@ -99,7 +101,7 @@ class DQNAgent(BaseAgent):
         self.replay_buffer.add(obs, action, reward, next_obs, terminated)
         self.steps += 1
 
-        if len(self.replay_buffer) < self.n_train_start:
+        if len(self.replay_buffer) < self.n_train_start or self.steps % self.train_freq:
             return None
 
         loss = dqn_update(
@@ -130,7 +132,7 @@ if __name__ == "__main__":
     train(
         dqn_agent,
         make_env=make_snake_env,
-        n_steps=100_000,
+        n_steps=800_000,
         eval_every=5000,
         group="fred_test",
         name="Snake-DQN",

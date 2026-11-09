@@ -120,7 +120,10 @@ def train(
                 # record the best agent now, the gif is logged once after training
                 if make_video_env is not None:
                     best_frames, stats = record_episode(
-                        video_env, lambda o: agent.act(o, greedy=True), seed=10_000
+                        video_env,
+                        lambda o: agent.act(o, greedy=True),
+                        seed=10_000,
+                        max_frames=5000,
                     )
                     best_caption = (
                         f"step={step} len={stats['length']} "
