@@ -51,7 +51,8 @@ def dqn_update(
 ) -> float:
     state, action, reward, state_next, terminated = buffer.sample(batch_size, rng)
 
-    q_next = target_net.predict(state_next).max(axis=1)
+    a_next = policy_net.predict(state_next).argmax(axis=1)
+    q_next = target_net.predict(state_next)[np.arange(batch_size), a_next]
     y = reward + gamma * q_next * (1.0 - terminated)  # reward or reward + gamma*q_next
 
     loss = train_step(

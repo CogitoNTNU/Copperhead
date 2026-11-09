@@ -7,6 +7,7 @@ from scipy.ndimage import label
 
 
 class Tile(IntEnum):
+    WALL = -1
     EMPTY = 0
     APPLE = 1
     BODY = 2
@@ -87,7 +88,9 @@ class Board:
         """Checks if the given position is inside the board."""
         pos_y, pos_x = pos
 
-        if pos_y < 0 or pos_y > self.height - 1 or pos_x < 0 or pos_x > self.width - 1:
+        if pos_y < 0 or pos_y > self.height - 1:
+            return False
+        elif pos_x < 0 or pos_x > self.width - 1:
             return False
 
         return True
@@ -160,8 +163,8 @@ class SnakeEnv:
         self.snake_length = 3
         self.max_steps_no_food = max_steps_no_food
         self.rewards = rewards or {
-            Event.MOVED: 0.0,
-            Event.ATE: 1.0,
+            Event.MOVED: -0.01,
+            Event.ATE: 2.0,
             Event.DIED: -1.0,
             Event.WON: 1.0,
         }
@@ -346,7 +349,7 @@ class SnakeEnv:
         next_obs = self.observe()
         reward = self.rewards[event]
 
-        info = {"length": len(self.board.body)}
+        info = {"score": len(self.board.body)}
 
         return next_obs, reward, terminated, truncated, info
 
