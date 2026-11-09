@@ -151,7 +151,7 @@ def record_episode(
     obs, info = env.reset(seed=seed)
     frames = [env.render(f"len {len(env.board.body)}  step 0")]
     episode_return, step = 0.0, 0
-    info = {"length": len(env.board.body)}
+    info = {"score": len(env.board.body)}
 
     for step in range(1, max_frames + 1):
         obs, reward, terminated, truncated, info = env.step(policy(obs))
@@ -160,7 +160,7 @@ def record_episode(
         # the episode is won if there is no apple left on the board
         won = terminated and not np.any(env.board.tiles == Tile.APPLE)
         dead = terminated and not won
-        frames.append(env.render(f"len {info['length']}  step {step}", dead=dead))
+        frames.append(env.render(f"len {info['score']}  step {step}", dead=dead))
 
         if terminated or truncated:
             break
@@ -168,7 +168,7 @@ def record_episode(
     # repeat the last frame, so the end of the episode is shown a bit longer
     frames += [frames[-1]] * hold_last
 
-    stats = {"return": episode_return, "length": info["length"], "steps": step}
+    stats = {"return": episode_return, "length": info["score"], "steps": step}
     return np.stack(frames), stats
 
 
