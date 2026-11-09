@@ -153,6 +153,7 @@ class SnakeEnv:
         max_steps_no_food: int = 100,
         rewards=None,
         obs_mode: str = "state",
+        obs_window_radius: int = 2,
     ):
         self.width = width
         self.height = height
@@ -166,6 +167,7 @@ class SnakeEnv:
         }
         self.rng = np.random.default_rng(seed)
         self.obs_mode = obs_mode
+        self.obs_window_radius = obs_window_radius
         self.board = None
 
     @property
