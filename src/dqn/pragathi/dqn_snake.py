@@ -4,6 +4,7 @@ import random
 from src.dqn.snake_env import SnakeEnv, Action
 from src.training.dqn_harness import evaluate, train
 
+
 class Parameter:
     def __init__(self, data) -> None:
         self.data = data
@@ -60,11 +61,26 @@ class QNetwork:
 
     def forward(self, x):
         self.x = x
-        layer_1 = self.x @ self.w1.data + self.b1.data
-        relu_preds = self.reLu(layer_1)
-        layer_2 = relu_preds @ self.w2.data + self.b2.data
 
-        return layer_2
+        self.z1 = self.x @ self.w1.data + self.b1.data
+        self.h1 = self.reLu(self.z1)
+
+        self.q_values = self.h1 @ self.w2.data + self.b2.data
+
+        return self.q_values
+
+    def backward(self, grad_output):
+        batch_size = self.x.shape[0]
+
+        self.w2.grad = self.h1.T @ grad_output
+        self.b2.grad = np.sum(grad_output, axis=0)
+
+        grad_hidden = grad_output @ self.w2.data.T
+
+        grad_hidden *= self.mask
+
+        self.w1.grad = self.x.T @ grad_hidden
+        self.b1.grad = np.sum(grad_hidden, axis=0)
 
     def reLu(self, x: np.ndarray):
         out = np.maximum(x, 0)
@@ -93,38 +109,53 @@ class SnakeDQN:
         self.rng = np.random.default_rng(seed)
         self.replay_buffer = replay_buffer
 
+        self.batch_size = 64
+        self.warmup = 1000          
+        self.target_update = 500    
+        self.steps = 0
+
         # Random rumber for q_network and target network
         rng = np.random.default_rng(seed=42)
 
         # Q network and target network initialisation
         self.q_network = QNetwork(state_dim, action_dim, rng)
         self.target_network = QNetwork(state_dim, action_dim, rng)
+        self.update_target_network()
 
         # Array of training errors
         self.training_error = []
 
-    def act(self):
-        
+
+    def act(self, obs: np.ndarray, greedy: bool = False):
+        self.num_actions = action_dim
+
         if greedy:
-            return np.argmax(self.q_netqork[obs]) # Exploit
+            return np.argmax(self.q_network[obs]) # Exploit
 
         if self.rng.random() < self.epsilon:
             return int(self.rng.integers(self.num_actions))  # Explore
 
-        return np.argmax(self.q_network[obs]) 
+        return int(np.argmax(self.q_network.forward(obs)))
+
 
     def observe(self, obs, action, reward, next_obs, done):
+        # update the replay buffer 
+        self.replay_buffer.update_buffer(state, action, next_state, reward, done)
+        
+    def update_target(self):
+        self.target_network.w1.data = self.q_network.w1.data.copy()
+        self.target_network.b1.data = self.q_network.b1.data.copy()
 
+        self.target_network.w2.data = self.q_network.w2.data.copy()
+        self.target_network.b2.data = self.q_network.b2.data.copy()
 
     def decay_epsilon(self):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
-
 
 def make_env():
     env = SnakeEnv(width=10, height=10, seed=0)
     obs, info = env.reset()
     return env
-
 
 class main():
     rb = ReplayBuffer(10**6)
@@ -148,6 +179,17 @@ class main():
         action_dim=action_dim,
         replay_buffer=rb,
     )
+
+    train(
+        agent=snake_dqn,
+        make_env=make_env,
+        n_steps=n_steps,
+        make_video_env=lambda: RenderedSnakeEnv(
+            width=10, height=10, max_steps_no_food=200, render_mode="rgb_array"
+        ),
+    )
+
+    evaluate(agent=snake_dqn, make_env=make_env)
 
 if __name__ == "__main__":
     main()

@@ -11,6 +11,7 @@ class CartPoleAgent:
         epsilon_decay: float,
         final_epsilon: float,
         discount_factor: float = 0.95,
+        snapshot_steps=(1_000, 5_000, 20_000),
     ):
         self.env = env
         self.q_values = defaultdict(lambda: np.zeros(env.action_space.n))
@@ -24,6 +25,11 @@ class CartPoleAgent:
         self.final_epsilon = final_epsilon
 
         self.training_error = []
+
+        # Snapshots of the Q-table for plotting learning progress
+        self.step_count = 0
+        self.snapshot_steps = set(snapshot_steps)
+        self.snapshots = {}
 
     def act(self, observation, greedy: bool = False):
         observation = tuple(observation)
@@ -60,9 +66,14 @@ class CartPoleAgent:
 
         self.training_error.append(temporal_difference)
         self.decay_epsilon()
+
+        self.step_count += 1
+        if self.step_count in self.snapshot_steps:
+            # copy every array, otherwise the snapshot keeps changing with the table
+            self.snapshots[self.step_count] = {k: v.copy() for k, v in self.q_values.items()}
+
         return self.q_values
 
-    #TODO discretize
     def decay_epsilon(self):
         self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
 
