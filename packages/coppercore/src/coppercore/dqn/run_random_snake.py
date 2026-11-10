@@ -18,7 +18,7 @@ for i in range(100):
     action = np.random.randint(0, 4)
     obs, reward, terminated, truncated, info = env.step(action)
 
-    env.render(f"{Action(action).name}  len {info['length']}", dead=terminated)
+    env.render(f"{Action(action).name}  len {info['score']}", dead=terminated)
 
     if terminated or truncated:
         break
