@@ -4,6 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from coppercore.model_driven_nn.construction.builder import Builder
 from coppercore.model_driven_nn.construction.common import (
     positive_int,
     validate_mapping,
@@ -134,7 +135,8 @@ def graph_yaml(
         spec: YamlMapping,
         incoming: Neurons,
         input_dim: int,
-    ) -> tuple[Neurons, int]:
+        shape_ctx: tuple[int, int, int] | None = None,
+    ) -> tuple[Neurons, int, tuple[int, int, int] | None]:
         component_type = spec["type"]
 
         if component_type == "linear":
@@ -144,7 +146,35 @@ def graph_yaml(
             )
             outgoing = column("Linear", output_dim)
             connect(incoming, outgoing, dense=True)
-            return outgoing, output_dim
+            return outgoing, output_dim, None
+
+        if component_type == "conv2d":
+            layer, output_dim = Builder().build(spec, input_dim, shape_ctx)
+            outgoing = column("Conv2D", output_dim)
+            connect(incoming, outgoing, dense=True)
+            return outgoing, output_dim, layer.output_shape
+
+        if component_type == "maxpool2d":
+            layer, output_dim = Builder().build(spec, input_dim, shape_ctx)
+            outgoing = column("MaxPool2D", output_dim)
+            connect(incoming, outgoing, dense=True)
+            return outgoing, output_dim, layer.output_shape
+
+        if component_type == "avgpool2d":
+            layer, output_dim = Builder().build(spec, input_dim, shape_ctx)
+            outgoing = column("AvgPool2D", output_dim)
+            connect(incoming, outgoing, dense=True)
+            return outgoing, output_dim, layer.output_shape
+
+        if component_type == "flatten":
+            outgoing = column(
+                "Flatten",
+                input_dim,
+                "#E0E7FF",
+                template=incoming,
+            )
+            connect(incoming, outgoing, dense=False)
+            return outgoing, input_dim, None
 
         if component_type == "relu":
             outgoing = column(
@@ -154,7 +184,7 @@ def graph_yaml(
                 template=incoming,
             )
             connect(incoming, outgoing, dense=False)
-            return outgoing, input_dim
+            return outgoing, input_dim, shape_ctx
 
         if component_type == "sequential":
             children = spec["layers"]
@@ -162,13 +192,14 @@ def graph_yaml(
                 raise TypeError("Sequential layers must be a list")
 
             for child in children:
-                incoming, input_dim = visit(
+                incoming, input_dim, shape_ctx = visit(
                     validate_mapping(child, "Layer"),
                     incoming,
                     input_dim,
+                    shape_ctx,
                 )
 
-            return incoming, input_dim
+            return incoming, input_dim, shape_ctx
 
         if component_type == "concat":
             paths = spec["paths"]
@@ -180,6 +211,7 @@ def graph_yaml(
                     validate_mapping(path, "Path"),
                     incoming,
                     input_dim,
+                    shape_ctx,
                 )
                 for path in paths
             ]
@@ -187,8 +219,13 @@ def graph_yaml(
             # Concatenation preserves the branch features and their order.
             # No additional computational neurons are introduced.
             return (
-                [neuron for branch_neurons, _ in branches for neuron in branch_neurons],
-                sum(dim for _, dim in branches),
+                [
+                    neuron
+                    for branch_neurons, _, _ in branches
+                    for neuron in branch_neurons
+                ],
+                sum(dim for _, dim, _ in branches),
+                None,
             )
 
         raise ValueError(f"Unsupported component type: {component_type!r}")
@@ -198,10 +235,11 @@ def graph_yaml(
         architecture.input_dim,
         "#FEF3C7",
     )
-    outputs, output_dim = visit(
+    outputs, output_dim, _ = visit(
         architecture.model,
         inputs,
         architecture.input_dim,
+        None,
     )
 
     if architecture.output_dim is not None and output_dim != architecture.output_dim:

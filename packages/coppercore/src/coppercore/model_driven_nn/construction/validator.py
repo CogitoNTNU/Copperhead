@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from coppercore.model_driven_nn.construction.common import (
+    non_negative_int,
     positive_int,
     validate_mapping,
 )
@@ -65,6 +66,85 @@ class Validator:
                 raise ValueError(f"{path}: expected an activation, got a linear layer")
 
             positive_int(spec.get("output_dim"), f"{path}.output_dim")
+            return False
+
+        if component_type == "flatten":
+            return expect_layer
+
+        if component_type in ("maxpool2d", "avgpool2d"):
+            if "kernel_size" in spec:
+                k = spec["kernel_size"]
+                if isinstance(k, list):
+                    for idx, val in enumerate(k):
+                        positive_int(val, f"{path}.kernel_size[{idx}]")
+                else:
+                    positive_int(k, f"{path}.kernel_size")
+
+            if "stride" in spec:
+                s = spec["stride"]
+                if isinstance(s, list):
+                    for idx, val in enumerate(s):
+                        positive_int(val, f"{path}.stride[{idx}]")
+                else:
+                    positive_int(s, f"{path}.stride")
+
+            if "padding" in spec:
+                p = spec["padding"]
+                if isinstance(p, list):
+                    for idx, val in enumerate(p):
+                        non_negative_int(val, f"{path}.padding[{idx}]")
+                else:
+                    non_negative_int(p, f"{path}.padding")
+
+            return expect_layer
+
+        if component_type == "conv2d":
+            if not expect_layer:
+                raise ValueError(
+                    f"{path}: expected an activation, got a convolution layer"
+                )
+
+            out_channels = (
+                spec.get("out_channels")
+                or spec.get("output_dim")
+                or spec.get("filters")
+            )
+            if out_channels is None:
+                raise ValueError(
+                    f"{path}: convolution layer requires 'out_channels', 'output_dim', or 'filters'"
+                )
+            positive_int(out_channels, f"{path}.out_channels")
+
+            if "in_channels" in spec:
+                positive_int(spec["in_channels"], f"{path}.in_channels")
+
+            if "kernel_size" in spec:
+                k = spec["kernel_size"]
+                if isinstance(k, list):
+                    for idx, val in enumerate(k):
+                        positive_int(val, f"{path}.kernel_size[{idx}]")
+                else:
+                    positive_int(k, f"{path}.kernel_size")
+
+            if "stride" in spec:
+                s = spec["stride"]
+                if isinstance(s, list):
+                    for idx, val in enumerate(s):
+                        positive_int(val, f"{path}.stride[{idx}]")
+                else:
+                    positive_int(s, f"{path}.stride")
+
+            if "padding" in spec:
+                p = spec["padding"]
+                if isinstance(p, list):
+                    for idx, val in enumerate(p):
+                        non_negative_int(val, f"{path}.padding[{idx}]")
+                else:
+                    non_negative_int(p, f"{path}.padding")
+
+            if "bias" in spec and not isinstance(spec["bias"], bool):
+                raise TypeError(f"{path}.bias must be a boolean")
+
             return False
 
         if component_type == "relu":

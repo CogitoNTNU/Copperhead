@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import yaml
+
 from coppercore.model_driven_nn.construction.parser import Parser
 from coppercore.model_driven_nn.construction.validator import Validator
 from coppercore.shared import Config
