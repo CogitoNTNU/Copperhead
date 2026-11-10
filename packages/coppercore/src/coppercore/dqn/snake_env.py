@@ -189,7 +189,11 @@ class SnakeEnv:
         return tuple(Action)
 
     def observe(self):
-        return self.get_state() if self.obs_mode == "state" else self.get_obs()
+        if self.obs_mode == "state":
+            return self.get_state()
+        elif self.obs_mode == "board":
+            return self.get_board_obs()
+        return self.get_obs()
 
     def get_state(self) -> int:
         # danger in each direction, including walls
@@ -210,12 +214,35 @@ class SnakeEnv:
         return int(bits @ (1 << np.arange(bits.size)))
 
     @property
+    def obs_shape(self) -> tuple[int, ...]:
+        """Shape of the observation array returned by observe()."""
+        if self.obs_mode == "board":
+            return (3, self.height, self.width)
+        elif self.obs_mode == "state":
+            return (1,)
+        return (self.obs_dim,)
+
+    @property
     def obs_dim(self) -> int:
-        """Length of the vector returned by get_obs."""
+        """Length of the vector returned by get_obs, or total elements if multidimensional."""
+        if self.obs_mode == "board":
+            return 3 * self.height * self.width
         window_size = (2 * self.obs_window_radius + 1) ** 2
 
         # danger and apple windows, apple and snake direction, area and tail per action, length
         return 2 * window_size + 2 + 2 + 2 * len(Action) + 1
+
+    def get_board_obs(self) -> npt.NDArray[np.float32]:
+        """
+        Full board representation of shape (3, height, width):
+        - channel 0: snake head (1.0 at head, 0.0 elsewhere)
+        - channel 1: snake body (1.0 at body, 0.0 elsewhere)
+        - channel 2: apple (1.0 at apple, 0.0 elsewhere)
+        """
+        head = (self.board.tiles == Tile.HEAD).astype(np.float32)
+        body = (self.board.tiles == Tile.BODY).astype(np.float32)
+        apple = (self.board.tiles == Tile.APPLE).astype(np.float32)
+        return np.stack([head, body, apple], axis=0)
 
     def get_obs(self) -> npt.NDArray:
         """

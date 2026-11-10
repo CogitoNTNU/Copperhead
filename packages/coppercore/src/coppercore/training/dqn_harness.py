@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import Protocol
 
 import numpy as np
+from tqdm import trange
 
 import wandb
 
@@ -78,7 +79,7 @@ def train(
 
         video_env = make_video_env()
 
-    for step in range(1, n_steps + 1):
+    for step in trange(1, n_steps + 1):
         # choose an action (with exploration)
         action = agent.act(obs)
 
