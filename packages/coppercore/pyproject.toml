@@ -20,7 +20,7 @@ rocm = [
     "cupy-rocm-7-0>=14.0.0",
 ]
 cuda = [
-    "cupy-cuda12x>=14.0.0",
+    "cupy-cuda12x[ctk]>=14.0.0",
 ]
 
 [project.scripts]
