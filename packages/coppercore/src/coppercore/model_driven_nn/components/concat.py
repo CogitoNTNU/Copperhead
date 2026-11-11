@@ -1,7 +1,8 @@
+import operator
 from collections.abc import Iterable
+from functools import reduce
 
-import numpy as np
-
+from coppercore.backend import get_array_module
 from coppercore.shared import FloatArray
 
 from .base import Component, Structure
@@ -36,18 +37,25 @@ class Concat(Structure):
             raise ValueError(
                 "Concat branch output dimensions changed after construction"
             )
-        return np.concatenate(outputs, axis=-1)
+        xp = get_array_module(*outputs)
+        return xp.concatenate(outputs, axis=-1)
 
     def backward(self, d_y: FloatArray) -> FloatArray:
         if self._branch_output_dims is None:
             raise RuntimeError("Concat.backward() called before forward()")
-        splits = np.cumsum(self._branch_output_dims[:-1])
-        branch_gradients = np.split(d_y, splits, axis=-1)
+        xp = get_array_module(d_y)
+        splits = [
+            sum(self._branch_output_dims[:i])
+            for i in range(1, len(self._branch_output_dims))
+        ]
+        branch_gradients = xp.split(d_y, splits, axis=-1)
         input_gradients = [
             branch.backward(grad)
             for branch, grad in zip(self.branches, branch_gradients)
         ]
-        return np.sum(input_gradients, axis=0)
+        if not input_gradients:
+            return d_y
+        return reduce(operator.add, input_gradients)
 
     def children(self) -> list[Component]:
         return self.branches

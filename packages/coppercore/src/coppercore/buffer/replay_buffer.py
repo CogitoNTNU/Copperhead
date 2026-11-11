@@ -39,13 +39,21 @@ class ReplayBuffer(Buffer):
                 f"Cannot sample {batch_size} transitions, buffer only holds {len(self)}"
             )
         idx = rng.integers(0, self.size, size=batch_size)
+        states = (
+            self.states[idx].astype(np.float32)
+            if self.states.dtype != np.float32
+            else self.states[idx]
+        )
+        next_states = (
+            self.next_states[idx].astype(np.float32)
+            if self.next_states.dtype != np.float32
+            else self.next_states[idx]
+        )
         return Batch(
-            self.states[idx].astype(
-                np.float32
-            ),  # avoid uint overflow and reassures FloatArray
+            states,
             self.actions[idx],
             self.rewards[idx],
-            self.next_states[idx],
+            next_states,
             self.terminated[idx],
         )
 

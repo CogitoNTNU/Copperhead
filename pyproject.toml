@@ -15,6 +15,10 @@ build-backend = "uv_build"
 
 [tool.uv]
 package = false
+conflicts = [[
+    { package = "coppercore", extra = "rocm" },
+    { package = "coppercore", extra = "cuda" },
+]]
 
 [tool.uv.sources]
 coppercore = { workspace = true }

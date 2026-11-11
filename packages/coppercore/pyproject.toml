@@ -15,6 +15,14 @@ dependencies = [
     "wandb>=0.31.0",
 ]
 
+[project.optional-dependencies]
+rocm = [
+    "cupy-rocm-7-0>=14.0.0",
+]
+cuda = [
+    "cupy-cuda12x>=14.0.0",
+]
+
 [project.scripts]
 network-graph = "coppercore.cli:graph"
 network-flatten = "coppercore.cli:flatten"

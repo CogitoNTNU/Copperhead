@@ -1,3 +1,5 @@
+from typing import Any, Self
+
 from coppercore.shared import FloatArray, format_number
 
 from .components import Structure
@@ -38,3 +40,7 @@ class Network:
     def zero_grad(self) -> None:
         for param in self.params():
             param.zero_grad()
+
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        self.model.to(device=device, dtype=dtype)
+        return self

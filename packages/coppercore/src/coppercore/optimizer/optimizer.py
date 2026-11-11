@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from typing import Any, Self
 
 from coppercore.model_driven_nn.parameter import Parameter
 
@@ -22,3 +23,7 @@ class Optimizer(ABC):
     @abstractmethod
     def step(self) -> None:
         pass
+
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        """Migrate internal optimizer state to target device and/or dtype."""
+        return self

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any, Self
 
 from coppercore.shared import FloatArray
 
@@ -22,6 +23,11 @@ class Component(ABC):
     def params(self) -> list[Parameter]:
         return []
 
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        for param in self.params():
+            param.to(device=device, dtype=dtype)
+        return self
+
 
 class Layer(Component, ABC):
     """Marker base class for layers."""
@@ -39,3 +45,8 @@ class Structure(Component, ABC):
 
     def params(self) -> list[Parameter]:
         return [parameter for child in self.children() for parameter in child.params()]
+
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        for child in self.children():
+            child.to(device=device, dtype=dtype)
+        return self

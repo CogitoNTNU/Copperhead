@@ -1,11 +1,10 @@
 import math
-from typing import cast
+from typing import Any, Self, cast
 
-import numpy as np
-
+from coppercore.backend import get_array_module, to_device
 from coppercore.model_driven_nn.components.base import Layer
 from coppercore.model_driven_nn.components.im2col import col2im, im2col, to_2d_tuple
-from coppercore.shared import FloatArray
+from coppercore.shared import FloatArray, IntArray
 
 
 class _Pool2DBase(Layer):
@@ -109,7 +108,13 @@ class MaxPool2D(_Pool2DBase):
         input_shape: tuple[int, int, int] | tuple[int, int] | list[int] | None = None,
     ) -> None:
         super().__init__(kernel_size, stride, padding, input_shape)
-        self._max_idx: np.ndarray | None = None
+        self._max_idx: IntArray | None = None
+
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        super().to(device=device, dtype=dtype)
+        if self._max_idx is not None:
+            self._max_idx = to_device(self._max_idx, device=device)
+        return self
 
     def forward(self, x: FloatArray, *, cache: bool = True) -> FloatArray:
         orig_shape = x.shape
@@ -131,19 +136,20 @@ class MaxPool2D(_Pool2DBase):
             )
 
         x_reshaped = x_4d.reshape(n * c_in, 1, h_in, w_in)
+        xp = get_array_module(x_reshaped)
         if p_h > 0 or p_w > 0:
-            x_pad = np.pad(
+            x_pad = xp.pad(
                 x_reshaped,
                 ((0, 0), (0, 0), (p_h, p_h), (p_w, p_w)),
                 mode="constant",
-                constant_values=-np.inf,
+                constant_values=-xp.inf,
             )
         else:
             x_pad = x_reshaped
 
         cols = im2col(x_pad, k_h, k_w, s_h, s_w, h_out, w_out)
-        max_idx = np.argmax(cols, axis=0)
-        max_vals = cols[max_idx, np.arange(cols.shape[1])]
+        max_idx = xp.argmax(cols, axis=0)
+        max_vals = cols[max_idx, xp.arange(cols.shape[1])]
         out = max_vals.reshape(n, c_in, h_out, w_out)
 
         if cache:
@@ -176,9 +182,10 @@ class MaxPool2D(_Pool2DBase):
         else:
             d_y_4d = d_y
 
+        xp = get_array_module(d_y, self._max_idx)
         num_windows = n * self._c_in * self._h_out * self._w_out
-        d_cols = np.zeros((k_h * k_w, num_windows), dtype=d_y.dtype)
-        d_cols[self._max_idx, np.arange(num_windows)] = d_y_4d.reshape(-1)
+        d_cols = xp.zeros((k_h * k_w, num_windows), dtype=d_y.dtype)
+        d_cols[self._max_idx, xp.arange(num_windows)] = d_y_4d.reshape(-1)
 
         d_x_pad = col2im(
             d_cols,
@@ -226,8 +233,9 @@ class AvgPool2D(_Pool2DBase):
             )
 
         x_reshaped = x_4d.reshape(n * c_in, 1, h_in, w_in)
+        xp = get_array_module(x_reshaped)
         if p_h > 0 or p_w > 0:
-            x_pad = np.pad(
+            x_pad = xp.pad(
                 x_reshaped,
                 ((0, 0), (0, 0), (p_h, p_h), (p_w, p_w)),
                 mode="constant",
@@ -237,7 +245,7 @@ class AvgPool2D(_Pool2DBase):
             x_pad = x_reshaped
 
         cols = im2col(x_pad, k_h, k_w, s_h, s_w, h_out, w_out)
-        mean_vals = np.mean(cols, axis=0)
+        mean_vals = xp.mean(cols, axis=0)
         out = mean_vals.reshape(n, c_in, h_out, w_out)
 
         if cache:
@@ -265,8 +273,9 @@ class AvgPool2D(_Pool2DBase):
         else:
             d_y_4d = d_y
 
+        xp = get_array_module(d_y)
         grad_per_elem = d_y_4d.reshape(-1) / (k_h * k_w)
-        d_cols = np.tile(grad_per_elem, (k_h * k_w, 1))
+        d_cols = xp.tile(grad_per_elem, (k_h * k_w, 1))
 
         d_x_pad = col2im(
             d_cols,

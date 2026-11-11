@@ -1,5 +1,8 @@
+from typing import Any, Self
+
 import numpy as np
 
+from coppercore.backend import get_array_module, to_device
 from coppercore.shared import FloatArray
 
 from ..parameter import Parameter
@@ -15,6 +18,12 @@ class Linear(Layer):
 
         self.x: FloatArray | None = None
 
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        super().to(device=device, dtype=dtype)
+        if self.x is not None:
+            self.x = to_device(self.x, device=device, dtype=dtype)
+        return self
+
     def forward(
         self,
         x: FloatArray,
@@ -24,15 +33,17 @@ class Linear(Layer):
         if cache:
             self.x = x
         x_2d = x.reshape(x.shape[0], -1) if x.ndim > 2 else x
-        return np.dot(x_2d, self.W.data) + self.b.data
+        xp = get_array_module(x_2d, self.W.data)
+        return xp.dot(x_2d, self.W.data) + self.b.data
 
     def backward(self, d_y: FloatArray) -> FloatArray:
         if self.x is None:
             raise RuntimeError("Linear.backward() called before forward()")
+        xp = get_array_module(d_y, self.W.data)
         x_2d = self.x.reshape(self.x.shape[0], -1) if self.x.ndim > 2 else self.x
-        self.W.grad += x_2d.T @ d_y
-        self.b.grad += np.sum(d_y, axis=0)
-        d_x = d_y @ self.W.data.T
+        self.W.grad += xp.dot(x_2d.T, d_y)
+        self.b.grad += xp.sum(d_y, axis=0)
+        d_x = xp.dot(d_y, self.W.data.T)
         if self.x.ndim > 2:
             return d_x.reshape(self.x.shape)
         return d_x

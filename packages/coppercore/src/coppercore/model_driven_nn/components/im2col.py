@@ -1,7 +1,6 @@
 from typing import cast
 
-import numpy as np
-
+from coppercore.backend import get_array_module
 from coppercore.shared import FloatArray
 
 
@@ -38,8 +37,9 @@ def im2col(
     h_out: int,
     w_out: int,
 ) -> FloatArray:
+    xp = get_array_module(x_pad)
     n, c, _, _ = x_pad.shape
-    cols = np.empty((c, k_h, k_w, n, h_out, w_out), dtype=x_pad.dtype)
+    cols = xp.empty((c, k_h, k_w, n, h_out, w_out), dtype=x_pad.dtype)
 
     for i in range(k_h):
         i_max = i + stride_h * h_out
@@ -62,15 +62,16 @@ def col2im(
     h_out: int,
     w_out: int,
 ) -> FloatArray:
+    xp = get_array_module(cols)
     n, c, _, _ = x_pad_shape
     cols_reshaped = cols.reshape(c, k_h, k_w, n, h_out, w_out)
-    x_pad = np.zeros(x_pad_shape, dtype=cols.dtype)
+    x_pad = xp.zeros(x_pad_shape, dtype=cols.dtype)
 
     for i in range(k_h):
         i_max = i + stride_h * h_out
         for j in range(k_w):
             j_max = j + stride_w * w_out
-            np.add.at(
+            xp.add.at(
                 x_pad,
                 (
                     slice(None),

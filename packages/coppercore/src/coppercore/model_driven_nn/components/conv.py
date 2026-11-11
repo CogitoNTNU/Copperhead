@@ -1,8 +1,9 @@
 import math
-from typing import cast
+from typing import Any, Self, cast
 
 import numpy as np
 
+from coppercore.backend import get_array_module, to_device
 from coppercore.model_driven_nn.components.base import Layer
 from coppercore.model_driven_nn.components.im2col import col2im, im2col, to_2d_tuple
 from coppercore.model_driven_nn.parameter import Parameter
@@ -62,6 +63,14 @@ class Conv2D(Layer):
         self._w_in: int = 0
         self._h_out: int = 0
         self._w_out: int = 0
+
+    def to(self, device: str | None = None, dtype: Any = None) -> Self:
+        super().to(device=device, dtype=dtype)
+        if self._x is not None:
+            self._x = to_device(self._x, device=device, dtype=dtype)
+        if self._cols is not None:
+            self._cols = to_device(self._cols, device=device, dtype=dtype)
+        return self
 
     @property
     def output_shape(self) -> tuple[int, int, int] | None:
@@ -136,8 +145,10 @@ class Conv2D(Layer):
                 f"stride: ({s_h}, {s_w}), padding: ({p_h}, {p_w})"
             )
 
+        xp = get_array_module(x_4d, self.W.data)
+
         if p_h > 0 or p_w > 0:
-            x_pad = np.pad(
+            x_pad = xp.pad(
                 x_4d,
                 ((0, 0), (0, 0), (p_h, p_h), (p_w, p_w)),
                 mode="constant",

@@ -1,14 +1,12 @@
+import argparse
+from typing import Any
+
 import numpy as np
-
-from coppercore.dqn.base_agent import BaseAgent
-from coppercore.dqn.snake_env import SnakeEnv, Event
-from coppercore.training.dqn_harness import train
-from coppercore.dqn.snake_render import RenderedSnakeEnv
-
-from coppercore.training.dqn_train import dqn_update
-
+from coppercore.backend import get_array_module, is_gpu_available, to_device, to_numpy
 from coppercore.buffer import ReplayBuffer
-from coppercore.model_driven_nn.network import Network
+from coppercore.dqn.base_agent import BaseAgent
+from coppercore.dqn.snake_env import Event, SnakeEnv
+from coppercore.dqn.snake_render import RenderedSnakeEnv
 from coppercore.model_driven_nn.components import (
     Conv2D,
     Flatten,
@@ -16,8 +14,10 @@ from coppercore.model_driven_nn.components import (
     ReLU,
     Sequential,
 )
+from coppercore.model_driven_nn.network import Network
 from coppercore.optimizer import ADAM
-
+from coppercore.training.dqn_harness import train
+from coppercore.training.dqn_train import dqn_update
 
 REWARDS = {Event.MOVED: -0.001, Event.ATE: 1.0, Event.DIED: -1.0, Event.WON: 10.0}
 
@@ -46,9 +46,23 @@ class DQNAgent(BaseAgent):
         obs_dim: int | None = None,
         obs_shape: tuple[int, ...] | None = None,
         seed: int = 0,
+        device: str = "cpu",
+        dtype: Any = np.float32,
+        n_train_start: int = 20_000,
+        n_target_start: int = 10_000,
+        train_freq: int = 4,
+        batch_size: int = 128,
+        replay_capacity: int = 200_000,
     ):
         self.n_state = n_states
         self.n_actions = n_actions
+        self.device = device.strip().lower() if isinstance(device, str) else "cpu"
+        self.dtype = dtype
+
+        if self.device == "gpu" and not is_gpu_available():
+            raise RuntimeError(
+                "Requested device='gpu' for DQNAgent, but CuPy / ROCm GPU runtime is not available."
+            )
 
         self.rng = np.random.default_rng(seed)
 
@@ -62,11 +76,10 @@ class DQNAgent(BaseAgent):
         self.steps = 0
 
         # Buffer and batching
-        self.n_train_start = 2000
-        self.n_target_start = 1000
-        self.train_freq = 4
-
-        self.batch_size = 100
+        self.n_train_start = n_train_start
+        self.n_target_start = n_target_start
+        self.train_freq = train_freq
+        self.batch_size = batch_size
 
         if obs_shape is None:
             if obs_dim is not None and obs_dim == 63:
@@ -80,7 +93,9 @@ class DQNAgent(BaseAgent):
 
         self.obs_shape = obs_shape
         self.replay_buffer = ReplayBuffer(
-            capacity=self.eps_decay_steps, obs_shape=obs_shape, obs_dtype=np.float32
+            capacity=replay_capacity,
+            obs_shape=obs_shape,
+            obs_dtype=np.float32,
         )
 
         in_channels = obs_shape[0] if len(obs_shape) == 3 else 1
@@ -110,9 +125,9 @@ class DQNAgent(BaseAgent):
                     ),
                     ReLU(),
                     Flatten(),
-                    Linear(conv_flat_dim, 64),
+                    Linear(conv_flat_dim, 128),
                     ReLU(),
-                    Linear(64, 64),
+                    Linear(128, 64),
                     ReLU(),
                     Linear(64, 4),
                 ]
@@ -133,9 +148,9 @@ class DQNAgent(BaseAgent):
                     ),
                     ReLU(),
                     Flatten(),
-                    Linear(conv_flat_dim, 64),
+                    Linear(conv_flat_dim, 128),
                     ReLU(),
-                    Linear(64, 64),
+                    Linear(128, 64),
                     ReLU(),
                     Linear(64, 4),
                 ]
@@ -144,12 +159,19 @@ class DQNAgent(BaseAgent):
             output_dim=4,
         )
 
+        self.Q_policy.to(device=self.device, dtype=self.dtype)
+        self.Q_target.to(device=self.device, dtype=self.dtype)
+
         self.optimizer = ADAM(learning_rate=5e-4)
         self.optimizer.parameters = self.Q_policy.params()
+        self.optimizer.to(device=self.device, dtype=self.dtype)
 
-        # The weights and bias for the policy network
-        self.params = {f"p{i}": p.data for i, p in enumerate(self.Q_policy.params())}
         self.network_update()
+
+    @property
+    def params(self) -> dict[str, np.ndarray]:
+        """NumPy parameter dict for model artifact serialization."""
+        return {f"p{i}": to_numpy(p.data) for i, p in enumerate(self.Q_policy.params())}
 
     @property
     def epsilon(self) -> float:
@@ -163,13 +185,15 @@ class DQNAgent(BaseAgent):
 
     def act(self, obs: np.ndarray, greedy: bool = False) -> int:
         if greedy or self.rng.random() >= self.epsilon:
-            # exploit and choose the current best action
+            # Exploit: run inference on selected device without unnecessary CPU transfers
             obs_batch = obs[None, ...] if obs.ndim == len(self.obs_shape) else obs
-            q_values = self.Q_policy.forward(obs_batch)
-            return int(np.argmax(q_values))
+            obs_dev = to_device(obs_batch, device=self.device, dtype=self.dtype)
+            q_values = self.Q_policy.predict(obs_dev)
+            xp = get_array_module(q_values)
+            action = int(to_numpy(xp.argmax(q_values, axis=1))[0])
+            return action
         else:
-            # explore other actions
-            # TODO: remove greedy action from selection
+            # Explore: skip neural network inference
             return int(self.rng.integers(self.n_actions))
 
     def observe(self, obs, action, reward, next_obs, terminated) -> dict | None:
@@ -187,33 +211,86 @@ class DQNAgent(BaseAgent):
             self.batch_size,
             self.gamma,
             self.rng,
+            device=self.device,
+            dtype=self.dtype,
         )
 
         if self.steps % self.n_target_start == 0:
             self.network_update()
 
         return {
-            "loss": loss,
+            "loss": float(loss),
             "epsilon": self.epsilon,
-        }  # a returned dict logged in WandB
+        }
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Snake Convolutional DQN Training")
+    parser.add_argument(
+        "--device",
+        choices=["cpu", "gpu"],
+        default="cpu",
+        help="Device to train on (cpu or gpu).",
+    )
+    parser.add_argument(
+        "--dtype",
+        choices=["float32", "float64"],
+        default="float32",
+        help="Floating point precision.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=128,
+        help="Batch size for DQN updates.",
+    )
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=800_000,
+        help="Total environment training steps.",
+    )
+    parser.add_argument(
+        "--eval-every",
+        type=int,
+        default=5000,
+        help="Evaluation interval in steps.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0xC0FFEE,
+        help="Random seed.",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
+    args = parse_args()
+    selected_dtype = np.float32 if args.dtype == "float32" else np.float64
     env = make_snake_env()
     dqn_agent = DQNAgent(
         n_states=env.n_states,
         n_actions=env.n_actions,
         obs_shape=env.obs_shape,
-        seed=0xC0FFEE,
+        seed=args.seed,
+        device=args.device,
+        dtype=selected_dtype,
+        batch_size=args.batch_size,
     )
 
     train(
         dqn_agent,
         make_env=make_snake_env,
-        n_steps=800_000,
-        eval_every=5000,
+        n_steps=args.n_steps,
+        eval_every=args.eval_every,
         group="Convolution",
         name="Snake-conv-DQN",
+        config={
+            "device": args.device,
+            "dtype": args.dtype,
+            "batch_size": args.batch_size,
+        },
         make_video_env=lambda: RenderedSnakeEnv(
             width=WIDTH,
             height=HEIGHT,
