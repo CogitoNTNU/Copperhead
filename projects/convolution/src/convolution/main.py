@@ -19,10 +19,10 @@ from coppercore.model_driven_nn.components import (
 from coppercore.optimizer import ADAM
 
 
-REWARDS = {Event.MOVED: -0.001, Event.ATE: 1.0, Event.DIED: -1.0, Event.WON: 10.0}
+REWARDS = {Event.MOVED: -0.0001, Event.ATE: 1.0, Event.DIED: -10.0, Event.WON: 100.0}
 
-WIDTH = 8
-HEIGHT = 8
+WIDTH = 20
+HEIGHT = 20
 
 
 def make_snake_env():
@@ -55,18 +55,18 @@ class DQNAgent(BaseAgent):
         # Exploration parameters
         self.max_epsilon = 1.0
         self.min_epsilon = 0.01
-        self.eps_decay_steps = 400_000
+        self.eps_decay_steps = 6_000_000
 
         # Q update parameters
         self.gamma = 0.99
         self.steps = 0
 
         # Buffer and batching
-        self.n_train_start = 2000
-        self.n_target_start = 1000
-        self.train_freq = 4
+        self.n_train_start = 20_000
+        self.n_target_start = 10_000
+        self.train_freq = 10
 
-        self.batch_size = 100
+        self.batch_size = 128
 
         if obs_shape is None:
             if obs_dim is not None and obs_dim == 63:
@@ -97,52 +97,55 @@ class DQNAgent(BaseAgent):
         conv_flat_dim = conv_out_channels * conv_h * conv_w
         total_dim = int(np.prod(obs_shape))
 
-        self.Q_policy = Network(
-            "snake-dqn-policy",
-            Sequential(
-                [
+        
+        def make_q_network(name):
+            return Network(
+                name,
+                Sequential([
                     Conv2D(
                         in_channels=in_channels,
-                        out_channels=conv_out_channels,
+                        out_channels=16,
                         kernel_size=3,
+                        stride=1,
                         padding=1,
-                        input_shape=(in_channels, conv_h, conv_w),
+                        input_shape=(in_channels, 22, 22),
                     ),
                     ReLU(),
-                    Flatten(),
-                    Linear(conv_flat_dim, 64),
-                    ReLU(),
-                    Linear(64, 64),
-                    ReLU(),
-                    Linear(64, 4),
-                ]
-            ),
-            input_dim=total_dim,
-            output_dim=4,
-        )
-        self.Q_target = Network(
-            "snake-dqn-target",
-            Sequential(
-                [
+        
                     Conv2D(
-                        in_channels=in_channels,
-                        out_channels=conv_out_channels,
+                        in_channels=16,
+                        out_channels=32,
                         kernel_size=3,
+                        stride=2,
                         padding=1,
-                        input_shape=(in_channels, conv_h, conv_w),
+                        input_shape=(16, 22, 22),
                     ),
                     ReLU(),
-                    Flatten(),
-                    Linear(conv_flat_dim, 64),
+        
+                    Conv2D(
+                        in_channels=32,
+                        out_channels=32,
+                        kernel_size=3,
+                        stride=2,
+                        padding=1,
+                        input_shape=(32, 11, 11),
+                    ),
                     ReLU(),
-                    Linear(64, 64),
+        
+                    Flatten(),
+                    Linear(32 * 6 * 6, 320),
+                    ReLU(),
+                    Linear(320, 64),
                     ReLU(),
                     Linear(64, 4),
-                ]
-            ),
-            input_dim=total_dim,
-            output_dim=4,
-        )
+                ]),
+                input_dim=in_channels * 22 * 22,
+                output_dim=4,
+            )
+        
+        
+        self.Q_policy = make_q_network("snake-dqn-policy")
+        self.Q_target = make_q_network("snake-dqn-target")
 
         self.optimizer = ADAM(learning_rate=5e-4)
         self.optimizer.parameters = self.Q_policy.params()
@@ -210,7 +213,7 @@ if __name__ == "__main__":
     train(
         dqn_agent,
         make_env=make_snake_env,
-        n_steps=800_000,
+        n_steps=10_000_000,
         eval_every=5000,
         group="Convolution",
         name="Snake-conv-DQN",
