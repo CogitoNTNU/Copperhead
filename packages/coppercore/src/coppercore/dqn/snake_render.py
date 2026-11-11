@@ -1,3 +1,5 @@
+"""Made with Claude."""
+
 import os
 
 # headless rendering, so it also runs on servers and clusters without a display
