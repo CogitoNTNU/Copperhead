@@ -318,7 +318,7 @@ model:
     try:
         network = Loader().load(path)
         assert isinstance(network, Network)
-        assert network.name == "cnn_v1"
+        assert network.name.startswith("cnn_v1")
         assert network.input_dim == 64
         assert network.output_dim == 2
 

@@ -20,13 +20,13 @@ while not (terminated or truncated):
 print(info["length"])
 ```
 
-| Argument            | Default   | Description                                             |
-| ------------------- | --------- | ------------------------------------------------------- |
-| `width`, `height`   | `10`      | Board size. `width` must be at least 4.                 |
-| `seed`              | `None`    | Seed for apple placement.                               |
-| `max_steps_no_food` | `100`     | Steps without eating before the episode is truncated.   |
-| `rewards`           | see below | Dict with a reward for every `Event`.                   |
-| `obs_mode`          | `"state"` | `"state"` for an integer, any other value for a vector. |
+| Argument            | Default   | Description                                                                                                     |
+| ------------------- | --------- | --------------------------------------------------------------------------------------------------------------- |
+| `width`, `height`   | `10`      | Board size. `width` must be at least 4.                                                                         |
+| `seed`              | `None`    | Seed for apple placement.                                                                                       |
+| `max_steps_no_food` | `100`     | Steps without eating before the episode is truncated.                                                           |
+| `rewards`           | see below | Dict with a reward for every `Event`.                                                                           |
+| `obs_mode`          | `"state"` | `"state"` for an integer, any other value for a vector.                                                         |
 | `movement_rule`     | `False`   | If `True`, locks movement to DOWN on even columns, UP on odd columns, LEFT on even rows, and RIGHT on odd rows. |
 
 ## Rules
@@ -49,7 +49,12 @@ print(info["length"])
 - Bits 0–3: a wall or body part is next to the head in that direction.
 - Bits 4–7: the apple lies in that direction.
 
-**Any other value** returns a flat `float32` vector of length `3 * height * width`, for neural networks. It holds one indicator channel each for body, head and apple.
+**`obs_mode="board"`** returns a `(3, height + 2, width + 2)` `float32` tensor representing the padded full board:
+- Channel 0: snake head (1.0 at head, 0.0 elsewhere, padded with 0.0).
+- Channel 1: snake body / danger gradient based on time until tile is free (`(length - i) / length` for segment `i`, 1.0 for wall padding, 0.0 for empty).
+- Channel 2: apple (1.0 at apple, 0.0 elsewhere, padded with 0.0).
+
+**Any other value** returns a flat `float32` vector of length `obs_dim`, for neural networks. It holds head-centered danger and apple windows plus global summary features.
 
 ## Rendering
 

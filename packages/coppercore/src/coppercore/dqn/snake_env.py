@@ -247,7 +247,7 @@ class SnakeEnv:
     def obs_shape(self) -> tuple[int, ...]:
         """Shape of the observation array returned by observe()."""
         if self.obs_mode == "board":
-            return (3, self.height, self.width)
+            return (3, self.height + 2, self.width + 2)
         elif self.obs_mode == "state":
             return (1,)
         return (self.obs_dim,)
@@ -256,7 +256,7 @@ class SnakeEnv:
     def obs_dim(self) -> int:
         """Length of the vector returned by get_obs, or total elements if multidimensional."""
         if self.obs_mode == "board":
-            return 3 * self.height * self.width
+            return 3 * (self.height + 2) * (self.width + 2)
         window_size = (2 * self.obs_window_radius + 1) ** 2
 
         # danger and apple windows, apple and snake direction, area and tail per action, length
@@ -264,15 +264,31 @@ class SnakeEnv:
 
     def get_board_obs(self) -> npt.NDArray[np.float32]:
         """
-        Full board representation of shape (3, height, width):
-        - channel 0: snake head (1.0 at head, 0.0 elsewhere)
-        - channel 1: snake body (1.0 at body, 0.0 elsewhere)
-        - channel 2: apple (1.0 at apple, 0.0 elsewhere)
+        Full board representation of shape (3, height + 2, width + 2) padded with walls:
+        - channel 0: snake head (1.0 at head, 0.0 elsewhere, padded with 0.0)
+        - channel 1: snake body / danger gradient based on time until tile is free
+                     (1.0 at head, decaying to 1/length at tail, 1.0 at wall padding, 0.0 elsewhere)
+        - channel 2: apple (1.0 at apple, 0.0 elsewhere, padded with 0.0)
         """
         head = (self.board.tiles == Tile.HEAD).astype(np.float32)
-        body = (self.board.tiles == Tile.BODY).astype(np.float32)
         apple = (self.board.tiles == Tile.APPLE).astype(np.float32)
-        return np.stack([head, body, apple], axis=0)
+
+        # Danger / body gradient: body part i leaves its tile after length - i steps
+        body_coords = np.array(self.board.body)
+        length = len(body_coords)
+        danger = np.zeros(self.board.tiles.shape, dtype=np.float32)
+        danger[body_coords[:, 0], body_coords[:, 1]] = (
+            (length - np.arange(length)) / length
+        ).astype(np.float32)
+
+        # Pad the board with a layer of always-taken spots (walls):
+        # - Head and Apple channels are padded with 0.0
+        # - Danger / body channel is padded with 1.0 (walls are permanently occupied / lethal)
+        head_padded = np.pad(head, pad_width=1, constant_values=0.0)
+        danger_padded = np.pad(danger, pad_width=1, constant_values=1.0)
+        apple_padded = np.pad(apple, pad_width=1, constant_values=0.0)
+
+        return np.stack([head_padded, danger_padded, apple_padded], axis=0)
 
     def get_obs(self) -> npt.NDArray:
         """
@@ -415,7 +431,13 @@ class SnakeEnv:
         if seed is not None:
             self.rng = np.random.default_rng(seed)
 
-        self.board = Board(self.width, self.height, self.snake_length, self.rng)
+        self.board = Board(
+            self.width,
+            self.height,
+            self.snake_length,
+            self.rng,
+            movement_rule=self.movement_rule,
+        )
         self.steps_no_food = 0
 
         return self.observe(), {}
