@@ -7,8 +7,8 @@ from collections.abc import Callable
 
 import numpy as np
 import pygame
-
 import wandb
+
 from coppercore.dqn.snake_env import SnakeEnv, Tile
 
 

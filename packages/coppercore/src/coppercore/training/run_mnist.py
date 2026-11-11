@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import numpy as np
+
 from coppercore.data import load_mnist
 from coppercore.model_driven_nn import Network
 from coppercore.model_driven_nn.construction import Loader

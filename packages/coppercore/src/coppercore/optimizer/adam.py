@@ -1,5 +1,6 @@
-from coppercore.optimizer.optimizer import Optimizer
 import numpy as np
+
+from coppercore.optimizer.optimizer import Optimizer
 
 
 class ADAM(Optimizer):

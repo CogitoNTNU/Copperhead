@@ -2,10 +2,10 @@ from collections.abc import Callable
 
 import numpy as np
 
+from coppercore.buffer import Buffer
 from coppercore.model_driven_nn import Network
 from coppercore.optimizer.optimizer import Optimizer
 from coppercore.shared import FloatArray, IntArray
-from coppercore.buffer import Buffer
 
 
 def train_step(

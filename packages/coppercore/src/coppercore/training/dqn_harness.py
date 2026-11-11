@@ -2,9 +2,8 @@ from collections.abc import Callable
 from typing import Protocol
 
 import numpy as np
-from tqdm import trange
-
 import wandb
+from tqdm import trange
 
 
 # required agent structure

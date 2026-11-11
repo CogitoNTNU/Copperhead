@@ -5,6 +5,7 @@ import time
 os.environ["SDL_VIDEODRIVER"] = ""
 
 import numpy as np
+
 from coppercore.dqn.snake_env import Action
 from coppercore.dqn.snake_render import RenderedSnakeEnv
 

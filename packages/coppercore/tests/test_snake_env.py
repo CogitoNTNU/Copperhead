@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
-from coppercore.dqn.snake_env import Action, Board, Event, SnakeEnv, Tile
+
+from coppercore.dqn.snake_env import Action, Board, SnakeEnv, Tile
 from coppercore.dqn.snake_render import RenderedSnakeEnv
 
 
