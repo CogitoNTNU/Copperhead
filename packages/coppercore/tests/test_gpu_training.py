@@ -209,6 +209,17 @@ def test_snake_dqn_agent_cpu_and_inference():
     )
 
     # 1. Parameter shapes and device/dtype
+    assert "snake-dqn-policy" in agent.Q_policy.name
+    assert "snake-dqn-target" in agent.Q_target.name
+    custom_agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        name="custom-dqn",
+    )
+    assert "custom-dqn-policy" in custom_agent.Q_policy.name
+    assert "custom-dqn-target" in custom_agent.Q_target.name
+
     for p in agent.Q_policy.params():
         assert p.data.dtype == np.float32
         assert isinstance(p.data, np.ndarray)

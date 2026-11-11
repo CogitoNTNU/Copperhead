@@ -53,7 +53,9 @@ class DQNAgent(BaseAgent):
         train_freq: int = 4,
         batch_size: int = 128,
         replay_capacity: int = 200_000,
+        name: str = "snake-dqn",
     ):
+        self.name = name
         self.n_state = n_states
         self.n_actions = n_actions
         self.device = device.strip().lower() if isinstance(device, str) else "cpu"
@@ -159,8 +161,8 @@ class DQNAgent(BaseAgent):
             )
 
 
-        self.Q_policy = make_q_network("snake-dqn-policy")
-        self.Q_target = make_q_network("snake-dqn-target")
+        self.Q_policy = make_q_network(f"{name}-policy")
+        self.Q_target = make_q_network(f"{name}-target")
 
         self.Q_policy.to(device=self.device, dtype=self.dtype)
         self.Q_target.to(device=self.device, dtype=self.dtype)
@@ -230,6 +232,12 @@ class DQNAgent(BaseAgent):
 def parse_args():
     parser = argparse.ArgumentParser(description="Snake Convolutional DQN Training")
     parser.add_argument(
+        "--name",
+        type=str,
+        default="Snake-conv-DQN",
+        help="Name of the network/run.",
+    )
+    parser.add_argument(
         "--device",
         choices=["cpu", "gpu"],
         default="cpu",
@@ -280,6 +288,7 @@ if __name__ == "__main__":
         device=args.device,
         dtype=selected_dtype,
         batch_size=args.batch_size,
+        name=args.name,
     )
 
     train(
@@ -288,7 +297,7 @@ if __name__ == "__main__":
         n_steps=args.n_steps,
         eval_every=args.eval_every,
         group="Convolution",
-        name="Snake-conv-DQN",
+        name=args.name,
         config={
             "device": args.device,
             "dtype": args.dtype,
