@@ -27,6 +27,7 @@ print(info["length"])
 | `max_steps_no_food` | `100`     | Steps without eating before the episode is truncated.   |
 | `rewards`           | see below | Dict with a reward for every `Event`.                   |
 | `obs_mode`          | `"state"` | `"state"` for an integer, any other value for a vector. |
+| `movement_rule`     | `False`   | If `True`, locks movement to DOWN on even columns, UP on odd columns, LEFT on even rows, and RIGHT on odd rows. |
 
 ## Rules
 

@@ -41,19 +41,31 @@ N_STATES = 2**8  # 4 danger bits + 4 apple bits
 
 
 class Board:
-    def __init__(self, width: int, height: int, length: int, rng: np.random.Generator):
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        length: int,
+        rng: np.random.Generator,
+        movement_rule: bool = False,
+    ):
         assert width // 2 >= length - 1, "the board is too small for the snake"
 
         self.width = width
         self.height = height
         self.length = length
         self.rng = rng
+        self.movement_rule = movement_rule
 
         self.tiles = np.full((self.height, self.width), Tile.EMPTY)
 
-        # initilize snake with given length as a deque
+        # initialize snake with given length as a deque
         head_y, head_x = height // 2, width // 2
-        self.body = deque((head_y, head_x - i) for i in range(self.length))
+        if self.movement_rule and head_y % 2 == 0:
+            head_x = width // 2 - 1
+            self.body = deque((head_y, head_x + i) for i in range(self.length))
+        else:
+            self.body = deque((head_y, head_x - i) for i in range(self.length))
 
         for part in list(self.body):
             self.tiles[part] = Tile.BODY
@@ -109,13 +121,29 @@ class Board:
         result[inside] = self.tiles[xn[inside], yn[inside]] == tile
         return result
 
+    def is_action_allowed(self, action: Action) -> bool:
+        """Checks if an action is allowed under the movement rule at the current head position."""
+        if not self.movement_rule:
+            return True
+
+        head_y, head_x = self.head
+        if action == Action.UP:
+            return head_x % 2 != 0
+        elif action == Action.DOWN:
+            return head_x % 2 == 0
+        elif action == Action.LEFT:
+            return head_y % 2 == 0
+        elif action == Action.RIGHT:
+            return head_y % 2 != 0
+        return True
+
     def next_pos(self, action: Action) -> tuple[int, int]:
-        """Returns the next head position for the given action. Reversing is ignored."""
+        """Returns the next head position for the given action. Reversing or rule violations are ignored."""
         dy, dx = DIRS[action]
         ry, rx = self.direction
 
         # prevent illegal turn
-        if (dy, dx) == (-ry, -rx):
+        if (dy, dx) == (-ry, -rx) or not self.is_action_allowed(action):
             dy, dx = ry, rx
 
         return (self.head[0] + dy, self.head[1] + dx)
@@ -157,6 +185,7 @@ class SnakeEnv:
         rewards=None,
         obs_mode: str = "state",
         obs_window_radius: int = 2,
+        movement_rule: bool = False,
     ):
         self.width = width
         self.height = height
@@ -171,6 +200,7 @@ class SnakeEnv:
         self.rng = np.random.default_rng(seed)
         self.obs_mode = obs_mode
         self.obs_window_radius = obs_window_radius
+        self.movement_rule = movement_rule
         self.board = None
 
     @property

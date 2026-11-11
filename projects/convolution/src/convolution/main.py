@@ -34,6 +34,7 @@ def make_snake_env():
         rewards=REWARDS,
         obs_mode="board",
         obs_window_radius=2,
+        movement_rule=True,
     )
 
 
@@ -220,5 +221,6 @@ if __name__ == "__main__":
             rewards=REWARDS,
             render_mode="rgb_array",
             obs_mode="board",
+            movement_rule=True,
         ),
     )
