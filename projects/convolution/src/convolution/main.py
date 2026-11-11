@@ -19,10 +19,10 @@ from coppercore.optimizer import ADAM
 from coppercore.training.dqn_harness import train
 from coppercore.training.dqn_train import dqn_update
 
-REWARDS = {Event.MOVED: -0.001, Event.ATE: 1.0, Event.DIED: -1.0, Event.WON: 10.0}
+REWARDS = {Event.MOVED: -0.0001, Event.ATE: 1.0, Event.DIED: -10.0, Event.WON: 100.0}
 
-WIDTH = 8
-HEIGHT = 8
+WIDTH = 20
+HEIGHT = 20
 
 
 def make_snake_env():
@@ -69,7 +69,7 @@ class DQNAgent(BaseAgent):
         # Exploration parameters
         self.max_epsilon = 1.0
         self.min_epsilon = 0.01
-        self.eps_decay_steps = 400_000
+        self.eps_decay_steps = 6_000_000
 
         # Q update parameters
         self.gamma = 0.99
@@ -112,52 +112,55 @@ class DQNAgent(BaseAgent):
         conv_flat_dim = conv_out_channels * conv_h * conv_w
         total_dim = int(np.prod(obs_shape))
 
-        self.Q_policy = Network(
-            "snake-dqn-policy",
-            Sequential(
-                [
+
+        def make_q_network(name):
+            return Network(
+                name,
+                Sequential([
                     Conv2D(
                         in_channels=in_channels,
-                        out_channels=conv_out_channels,
+                        out_channels=16,
                         kernel_size=3,
+                        stride=1,
                         padding=1,
-                        input_shape=(in_channels, conv_h, conv_w),
+                        input_shape=(in_channels, 22, 22),
                     ),
                     ReLU(),
-                    Flatten(),
-                    Linear(conv_flat_dim, 128),
-                    ReLU(),
-                    Linear(128, 64),
-                    ReLU(),
-                    Linear(64, 4),
-                ]
-            ),
-            input_dim=total_dim,
-            output_dim=4,
-        )
-        self.Q_target = Network(
-            "snake-dqn-target",
-            Sequential(
-                [
+
                     Conv2D(
-                        in_channels=in_channels,
-                        out_channels=conv_out_channels,
+                        in_channels=16,
+                        out_channels=32,
                         kernel_size=3,
+                        stride=2,
                         padding=1,
-                        input_shape=(in_channels, conv_h, conv_w),
+                        input_shape=(16, 22, 22),
                     ),
                     ReLU(),
-                    Flatten(),
-                    Linear(conv_flat_dim, 128),
+
+                    Conv2D(
+                        in_channels=32,
+                        out_channels=32,
+                        kernel_size=3,
+                        stride=2,
+                        padding=1,
+                        input_shape=(32, 11, 11),
+                    ),
                     ReLU(),
-                    Linear(128, 64),
+
+                    Flatten(),
+                    Linear(32 * 6 * 6, 320),
+                    ReLU(),
+                    Linear(320, 64),
                     ReLU(),
                     Linear(64, 4),
-                ]
-            ),
-            input_dim=total_dim,
-            output_dim=4,
-        )
+                ]),
+                input_dim=in_channels * 22 * 22,
+                output_dim=4,
+            )
+
+
+        self.Q_policy = make_q_network("snake-dqn-policy")
+        self.Q_target = make_q_network("snake-dqn-target")
 
         self.Q_policy.to(device=self.device, dtype=self.dtype)
         self.Q_target.to(device=self.device, dtype=self.dtype)
