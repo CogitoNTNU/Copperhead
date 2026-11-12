@@ -7,7 +7,7 @@ from coppercore.backend import get_array_module, to_device
 from coppercore.model_driven_nn.components.base import Layer
 from coppercore.model_driven_nn.components.im2col import col2im, im2col, to_2d_tuple
 from coppercore.model_driven_nn.parameter import Parameter
-from coppercore.shared import FloatArray
+from coppercore.shared import FloatArray, YamlMapping
 
 
 class Conv2D(Layer):
@@ -230,6 +230,28 @@ class Conv2D(Layer):
 
     def params(self) -> list[Parameter]:
         return [self.W, self.b] if self.b is not None else [self.W]
+
+    def to_config(self) -> YamlMapping:
+        config: YamlMapping = {
+            "type": "conv2d",
+            "in_channels": self.in_channels,
+            "out_channels": self.out_channels,
+            "kernel_size": list(self.kernel_size),
+            "stride": list(self.stride),
+            "padding": list(self.padding),
+            "bias": self.has_bias,
+        }
+        if self.input_shape is not None:
+            config["input_shape"] = list(self.input_shape)
+        return config
+
+    def named_parameters(self, prefix: str = "") -> list[tuple[str, Parameter]]:
+        p_w = f"{prefix}.W" if prefix else "W"
+        params = [(p_w, self.W)]
+        if self.b is not None:
+            p_b = f"{prefix}.b" if prefix else "b"
+            params.append((p_b, self.b))
+        return params
 
     def zero_grad(self) -> None:
         for param in self.params():

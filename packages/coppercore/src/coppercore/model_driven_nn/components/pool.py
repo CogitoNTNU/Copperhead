@@ -4,7 +4,7 @@ from typing import Any, Self, cast
 from coppercore.backend import get_array_module, to_device
 from coppercore.model_driven_nn.components.base import Layer
 from coppercore.model_driven_nn.components.im2col import col2im, im2col, to_2d_tuple
-from coppercore.shared import FloatArray, IntArray
+from coppercore.shared import FloatArray, IntArray, YamlMapping
 
 
 class _Pool2DBase(Layer):
@@ -95,6 +95,17 @@ class _Pool2DBase(Layer):
             )
 
         raise ValueError(f"Expected 2D, 3D, or 4D input array, got {x.ndim}D")
+
+    def _base_config(self, pool_type: str) -> YamlMapping:
+        config: YamlMapping = {
+            "type": pool_type,
+            "kernel_size": list(self.kernel_size),
+            "stride": list(self.stride),
+            "padding": list(self.padding),
+        }
+        if self.input_shape is not None:
+            config["input_shape"] = list(self.input_shape)
+        return config
 
 
 class MaxPool2D(_Pool2DBase):
@@ -209,6 +220,9 @@ class MaxPool2D(_Pool2DBase):
 
         return cast(FloatArray, d_x_4d)
 
+    def to_config(self) -> YamlMapping:
+        return self._base_config("maxpool2d")
+
 
 class AvgPool2D(_Pool2DBase):
     """2D Average Pooling layer."""
@@ -298,3 +312,6 @@ class AvgPool2D(_Pool2DBase):
             return cast(FloatArray, d_x_4d.reshape(self._orig_shape))
 
         return cast(FloatArray, d_x_4d)
+
+    def to_config(self) -> YamlMapping:
+        return self._base_config("avgpool2d")

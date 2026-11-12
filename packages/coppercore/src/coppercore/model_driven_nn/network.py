@@ -1,6 +1,6 @@
-from typing import Any, Self
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Any, Self
 
 from coppercore.shared import FloatArray, YamlMapping, format_number
 
@@ -86,10 +86,15 @@ class Network:
         save_model_bundle(self, path)
 
     @classmethod
-    def load_model(cls, path: str | Path) -> "Network":
+    def load_model(
+        cls,
+        path: str | Path,
+        device: str | None = None,
+        dtype: Any = None,
+    ) -> "Network":
         from .serialization import load_model_bundle
 
-        return load_model_bundle(path)
+        return load_model_bundle(path, device=device, dtype=dtype)
 
     def to(self, device: str | None = None, dtype: Any = None) -> Self:
         self.model.to(device=device, dtype=dtype)

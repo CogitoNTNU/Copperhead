@@ -1,8 +1,8 @@
 import json
-from pathlib import Path
 import shutil
 import tempfile
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..network import Network
@@ -59,8 +59,13 @@ def save_model_bundle(network: "Network", dir_path: str | Path) -> None:
         raise
 
 
-def load_model_bundle(dir_path: str | Path) -> "Network":
+def load_model_bundle(
+    dir_path: str | Path,
+    device: str | None = None,
+    dtype: Any = None,
+) -> "Network":
     from ..construction.loader import Loader
+    from .weights import load_weights_from_file
 
     model_dir = Path(dir_path).resolve()
     if not model_dir.exists() or not model_dir.is_dir():
@@ -106,6 +111,13 @@ def load_model_bundle(dir_path: str | Path) -> "Network":
             f"Weight file specified in manifest not found: {weights_path}"
         )
 
+    weights = load_weights_from_file(weights_path)
+    target_dtype = dtype
+    if target_dtype is None and weights:
+        target_dtype = next(iter(weights.values())).dtype
+
     network = Loader().load(arch_path)
-    network.load_weights(weights_path)
+    if device is not None or target_dtype is not None:
+        network.to(device=device, dtype=target_dtype)
+    network.load_state_dict(weights)
     return network

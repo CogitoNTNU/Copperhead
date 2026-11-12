@@ -1,5 +1,5 @@
 from coppercore.model_driven_nn.components.base import Layer
-from coppercore.shared import FloatArray
+from coppercore.shared import FloatArray, YamlMapping
 
 
 class Flatten(Layer):
@@ -26,3 +26,6 @@ class Flatten(Layer):
         if len(self._orig_shape) <= 2:
             return d_y
         return d_y.reshape(self._orig_shape)
+
+    def to_config(self) -> YamlMapping:
+        return {"type": "flatten"}

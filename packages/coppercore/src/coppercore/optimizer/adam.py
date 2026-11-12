@@ -74,8 +74,6 @@ class ADAM(Optimizer):
         self,
         state_dict: Mapping[str, Any],
         network: Network,
-        *,
-        cast_dtype: bool = False,
     ) -> None:
         if state_dict["optimizer_type"] != "ADAM":
             raise ValueError("Checkpoint is not an Adam optimizer")
@@ -103,11 +101,9 @@ class ADAM(Optimizer):
             if time_step == 0:
                 continue
 
-            new_m1.append(np.array(m1, dtype=param.data.dtype, copy=True))
-            new_m2.append(np.array(m2, dtype=param.data.dtype, copy=True))
-
-        self.moment_1 = new_m1
-        self.moment_2 = new_m2
+            xp = get_array_module(param.data)
+            new_m1.append(xp.asarray(m1, dtype=param.data.dtype).copy())
+            new_m2.append(xp.asarray(m2, dtype=param.data.dtype).copy())
 
         # Only modify optimizer state after successful loading.
         self.learning_rate = float(state_dict["learning_rate"])

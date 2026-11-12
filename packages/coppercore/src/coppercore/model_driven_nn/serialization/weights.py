@@ -1,10 +1,11 @@
-from collections.abc import Mapping
-from pathlib import Path
 import tempfile
 import zipfile
+from collections.abc import Mapping
+from pathlib import Path
 
 import numpy as np
 
+from coppercore.backend import get_array_module
 from coppercore.shared import FloatArray
 
 from ..parameter import Parameter
@@ -49,13 +50,15 @@ def validate_and_load_state_dict(
 
     for name, param in named_params:
         value = state_dict[name]
-        if not isinstance(value, np.ndarray) and not isinstance(
-            value, (list, tuple, int, float)
+        if (
+            not isinstance(value, np.ndarray)
+            and not isinstance(value, (list, tuple, int, float))
+            and not hasattr(value, "get")
         ):
             raise TypeError(
                 f"Parameter '{name}' value must be an array-like object, got {type(value).__name__}"
             )
-        arr = np.asarray(value)
+        arr = to_numpy_array(value) if hasattr(value, "get") else np.asarray(value)
         if not np.issubdtype(arr.dtype, np.number):
             raise ValueError(
                 f"Parameter '{name}' must have a numeric dtype, got {arr.dtype}"
@@ -68,10 +71,12 @@ def validate_and_load_state_dict(
 
     for name, param in named_params:
         arr = validated_arrays[name]
+        xp = get_array_module(param.data)
+        device_arr = xp.asarray(arr, dtype=param.data.dtype)
         if hasattr(param.data, "__setitem__"):
-            param.data[...] = arr
+            param.data[...] = device_arr
         else:
-            param.data = np.array(arr, copy=True)
+            param.data = device_arr.copy()
 
 
 def save_weights_to_file(

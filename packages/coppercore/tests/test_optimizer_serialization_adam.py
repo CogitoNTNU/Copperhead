@@ -1,5 +1,5 @@
 import numpy as np
-
+from coppercore.backend import get_array_module, is_gpu_available
 from coppercore.model_driven_nn.components import Linear, ReLU, Sequential
 from coppercore.model_driven_nn.network import Network
 from coppercore.optimizer.adam import ADAM
@@ -186,3 +186,82 @@ def test_adam_save_load_before_first_step(tmp_path):
 
     assert opt2.time_step == 1
     assert len(opt2.moment_1) == len(net.params())
+
+
+def test_adam_moments_dtype_and_backend_preservation(tmp_path):
+    # Test CPU float32 and float64
+    for dtype in [np.float32, np.float64]:
+        model = Sequential([Linear(4, 2)])
+        net = Network(f"adam_dtype_{dtype.__name__}", model, 4, 2).to(dtype=dtype)
+
+        opt = ADAM(learning_rate=0.002)
+        opt.parameters = net.params()
+
+        net.zero_grad()
+        out = net.forward(np.ones((1, 4), dtype=dtype))
+        net.backward(np.ones_like(out))
+        opt.step()
+
+        save_path = tmp_path / f"adam_{dtype.__name__}.npz"
+        opt.save_state(save_path, net)
+
+        net_restored = Network(
+            f"adam_target_{dtype.__name__}", Sequential([Linear(4, 2)]), 4, 2
+        ).to(dtype=dtype)
+        opt_restored = ADAM()
+        opt_restored.parameters = net_restored.params()
+        opt_restored.load_state(save_path, net_restored)
+
+        assert opt_restored.time_step == 1
+        for m1, m2 in zip(opt_restored.moment_1, opt_restored.moment_2):
+            assert isinstance(m1, np.ndarray)
+            assert isinstance(m2, np.ndarray)
+            assert m1.dtype == dtype
+            assert m2.dtype == dtype
+
+    # Test GPU if hardware available
+    if not is_gpu_available():
+        return
+
+    net_gpu = Network("adam_gpu", Sequential([Linear(4, 2)]), 4, 2).to(
+        device="gpu", dtype=np.float32
+    )
+    opt_gpu = ADAM()
+    opt_gpu.parameters = net_gpu.params()
+
+    net_gpu.zero_grad()
+    xp = get_array_module(net_gpu.params()[0].data)
+    out = net_gpu.forward(xp.ones((1, 4), dtype=np.float32))
+    net_gpu.backward(xp.ones_like(out))
+    opt_gpu.step()
+
+    gpu_save_path = tmp_path / "adam_gpu.npz"
+    opt_gpu.save_state(gpu_save_path, net_gpu)
+
+    # Restore onto GPU
+    net_gpu_restored = Network("adam_gpu_target", Sequential([Linear(4, 2)]), 4, 2).to(
+        device="gpu", dtype=np.float32
+    )
+    opt_gpu_restored = ADAM()
+    opt_gpu_restored.parameters = net_gpu_restored.params()
+    opt_gpu_restored.load_state(gpu_save_path, net_gpu_restored)
+
+    for m1, m2 in zip(opt_gpu_restored.moment_1, opt_gpu_restored.moment_2):
+        assert hasattr(m1, "get")
+        assert hasattr(m2, "get")
+        assert m1.dtype == np.float32
+        assert m2.dtype == np.float32
+
+    # Restore onto CPU
+    net_cpu_restored = Network("adam_cpu_target", Sequential([Linear(4, 2)]), 4, 2).to(
+        device="cpu", dtype=np.float32
+    )
+    opt_cpu_restored = ADAM()
+    opt_cpu_restored.parameters = net_cpu_restored.params()
+    opt_cpu_restored.load_state(gpu_save_path, net_cpu_restored)
+
+    for m1, m2 in zip(opt_cpu_restored.moment_1, opt_cpu_restored.moment_2):
+        assert isinstance(m1, np.ndarray)
+        assert isinstance(m2, np.ndarray)
+        assert m1.dtype == np.float32
+        assert m2.dtype == np.float32

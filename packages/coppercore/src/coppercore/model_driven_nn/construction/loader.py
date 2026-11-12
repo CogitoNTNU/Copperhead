@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from coppercore.model_driven_nn.components import Structure
 from coppercore.model_driven_nn.construction.builder import Builder
@@ -56,5 +57,10 @@ class Loader:
 
         return Network(name, model, input_dim, actual_output_dim)
 
-    def load_model(self, path: str | Path) -> Network:
-        return Network.load_model(path)
+    def load_model(
+        self,
+        path: str | Path,
+        device: str | None = None,
+        dtype: Any = None,
+    ) -> Network:
+        return Network.load_model(path, device=device, dtype=dtype)
