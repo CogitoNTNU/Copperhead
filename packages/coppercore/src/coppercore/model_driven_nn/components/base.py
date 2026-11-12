@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from coppercore.shared import FloatArray
+from coppercore.shared import FloatArray, YamlMapping
 
 from ..parameter import Parameter
 
@@ -20,6 +20,14 @@ class Component(ABC):
         """Return the gradient with respect to the component input."""
 
     def params(self) -> list[Parameter]:
+        return []
+
+    def to_config(self) -> YamlMapping:
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support serialization to config"
+        )
+
+    def named_parameters(self, prefix: str = "") -> list[tuple[str, Parameter]]:
         return []
 
 

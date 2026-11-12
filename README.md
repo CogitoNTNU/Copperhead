@@ -68,6 +68,43 @@ uv run python -m coppercore.dqn.run_random_snake
 
 See the [Snake environment README](packages/coppercore/src/coppercore/dqn/README.md) for how to use the environment with your own agent.
 
+### 💾 Network Serialization and Checkpointing
+
+Copperhead supports exporting network architectures to YAML, saving learned weights as NPZ arrays, and full-model directory checkpoints containing both architecture and parameters.
+
+#### Saving a model
+
+```python
+network.save_model("models/my-network")
+```
+
+#### Loading a model
+
+```python
+network = Network.load_model("models/my-network")
+```
+
+#### Saving architecture separately
+
+```python
+network.save_architecture("architecture.yaml")
+```
+
+#### Loading an exported architecture
+
+```python
+network = Loader().load("architecture.yaml")
+```
+
+#### Saving and loading weights
+
+```python
+network.save_weights("weights.npz")
+network.load_weights("weights.npz")
+```
+
+> **Note:** Exporting an architecture does not preserve trained weights, while exporting a complete model (`save_model`) preserves both architecture and learned parameters.
+
 ### 📖 Generate Documentation Site
 
 To build and preview the documentation site locally:
