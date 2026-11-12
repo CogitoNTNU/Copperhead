@@ -105,6 +105,51 @@ network.load_weights("weights.npz")
 
 > **Note:** Exporting an architecture does not preserve trained weights, while exporting a complete model (`save_model`) preserves both architecture and learned parameters.
 
+### ⚙️ Optimizer State Serialization
+
+Copperhead supports saving and restoring optimizer state (`ADAM` and `SGD`) to enable training continuation without resetting optimizer momentum, running averages, or timesteps.
+
+#### Saving network and optimizer
+
+```python
+network.save_model("checkpoints/network")
+
+optimizer.save_state("checkpoints/optimizer")
+```
+
+#### Restoring network and optimizer
+
+When restoring an optimizer, associate it with the restored network parameters so that moment tensors map to the correct stable parameter names:
+
+```python
+from coppercore.model_driven_nn.network import Network
+from coppercore.optimizer.adam import ADAM
+
+network = Network.load_model("checkpoints/network")
+
+optimizer = ADAM()
+optimizer.load_state("checkpoints/optimizer", network)
+
+# Alternatively, pass the network directly when loading state:
+# optimizer = ADAM()
+# optimizer.load_state("checkpoints/optimizer", network)
+```
+
+#### In-memory state dict operations
+
+```python
+# Export optimizer state dictionary
+state = optimizer.state_dict()
+
+# Load optimizer state dictionary
+optimizer.load_state_dict(state)
+```
+
+#### What is saved and what is not saved
+
+- **Saved**: Optimizer hyperparameters (learning rate, decays, epsilon), current timestep (`time_step`), and first/second moment arrays for all named parameters.
+- **Not saved**: Replay buffer history, DQN target network weights, environment state, RNG seed/states, or training-loop counters. Resuming full DQN training requires orchestrating those components separately.
+
 ### 📖 Generate Documentation Site
 
 To build and preview the documentation site locally:
