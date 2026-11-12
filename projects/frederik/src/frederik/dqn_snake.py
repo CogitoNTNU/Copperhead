@@ -88,14 +88,27 @@ class DQNAgent(BaseAgent):
         for t, p in zip(self.Q_target.params(), self.Q_policy.params()):
             t.data[...] = p.data
 
+    def act_batch(
+        self,
+        observations: np.ndarray,
+        greedy: bool = True,
+    ) -> np.ndarray:
+        batch_size = len(observations)
+        if batch_size == 0:
+            return np.empty(0, dtype=np.int64)
+        if greedy or self.rng.random() >= self.epsilon:
+            q_values = self.Q_policy.predict(observations)
+            return np.argmax(q_values, axis=1).astype(np.int64)
+        else:
+            return self.rng.integers(self.n_actions, size=batch_size, dtype=np.int64)
+
     def act(self, obs: np.ndarray, greedy: bool = False) -> int:
         if greedy or self.rng.random() >= self.epsilon:
-            # exploit and choose the current best action
-            return np.argmax(self.Q_policy.forward(obs))
+            obs_batch = obs[None, ...] if obs.ndim == 1 else obs
+            return int(self.act_batch(obs_batch, greedy=True)[0])
         else:
             # explore other actions
-            # TODO: remove greedy action from selection
-            return self.rng.integers(self.n_actions)
+            return int(self.rng.integers(self.n_actions))
 
     def observe(self, obs, action, reward, next_obs, terminated) -> dict | None:
         self.replay_buffer.add(obs, action, reward, next_obs, terminated)

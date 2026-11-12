@@ -1,3 +1,4 @@
+import time
 from collections.abc import Callable
 from typing import Protocol
 
@@ -16,31 +17,109 @@ class Agent(Protocol):
 def evaluate(
     agent: Agent, make_env: Callable, n_episodes: int = 20, seed: int = 10_000
 ) -> dict:
-    """Play n_episodes without exploration (greedy=True) and return the averages."""
-    # a separate env, so evaluation doesn't interrupt the training episode
-    env = make_env()
-    returns, scores = [], []
+    """Evaluate agent across n_episodes using batched inference and return metrics."""
+    if n_episodes <= 0:
+        return {
+            "return_mean": 0.0,
+            "duration_seconds": 0.0,
+            "total_episodes": 0,
+            "total_transitions": 0,
+            "env_steps_per_second": 0.0,
+            "inference_calls": 0,
+            "mean_inference_batch_size": 0.0,
+            "mean_inference_latency_seconds": 0.0,
+            "inference_duration_seconds": 0.0,
+            "episode_length_mean": 0.0,
+        }
+
+    start_time = time.perf_counter()
+    envs = [make_env() for _ in range(n_episodes)]
+
+    current_obs = [None] * n_episodes
+    episode_returns = [0.0] * n_episodes
+    episode_lengths = [0] * n_episodes
+    episode_scores = [None] * n_episodes
 
     for i in range(n_episodes):
-        # same seeds every time, so results are comparable across agents and runs
-        obs, info = env.reset(seed=seed + i)
-        episode_return = 0.0
-        done = False
-
-        while not done:
-            action = agent.act(obs, greedy=True)
-            obs, reward, terminated, truncated, info = env.step(action)
-            episode_return += reward
-            done = terminated or truncated
-
-        returns.append(episode_return)
-
+        obs, info = envs[i].reset(seed=seed + i)
+        current_obs[i] = obs
         if "score" in info:
-            scores.append(info["score"])
+            episode_scores[i] = info["score"]
 
-    out = {"return_mean": float(np.mean(returns))}
+    active_indices = list(range(n_episodes))
+    total_transitions = 0
+    inference_calls = 0
+    total_inference_batch_size = 0
+    total_inference_time = 0.0
+
+    has_act_batch = callable(getattr(agent, "act_batch", None))
+
+    while active_indices:
+        batch_obs = np.stack([current_obs[i] for i in active_indices], axis=0)
+        batch_size = len(active_indices)
+        total_inference_batch_size += batch_size
+        inference_calls += 1
+
+        t0 = time.perf_counter()
+        if has_act_batch:
+            actions = agent.act_batch(batch_obs, greedy=True)
+        else:
+            actions = np.array(
+                [agent.act(current_obs[i], greedy=True) for i in active_indices],
+                dtype=np.int64,
+            )
+        total_inference_time += time.perf_counter() - t0
+
+        next_active_indices = []
+        for idx, env_idx in enumerate(active_indices):
+            action = int(actions[idx])
+            obs, reward, terminated, truncated, info = envs[env_idx].step(action)
+            episode_returns[env_idx] += float(reward)
+            episode_lengths[env_idx] += 1
+            total_transitions += 1
+
+            if "score" in info:
+                episode_scores[env_idx] = info["score"]
+
+            if not (terminated or truncated):
+                current_obs[env_idx] = obs
+                next_active_indices.append(env_idx)
+
+        active_indices = next_active_indices
+
+    for env in envs:
+        if hasattr(env, "close") and callable(env.close):
+            env.close()
+
+    total_duration = time.perf_counter() - start_time
+
+    out = {
+        "return_mean": float(np.mean(episode_returns)),
+        "duration_seconds": float(total_duration),
+        "total_episodes": n_episodes,
+        "total_transitions": total_transitions,
+        "env_steps_per_second": (
+            float(total_transitions / total_duration) if total_duration > 0 else 0.0
+        ),
+        "inference_calls": inference_calls,
+        "mean_inference_batch_size": (
+            float(total_inference_batch_size / inference_calls)
+            if inference_calls > 0
+            else 0.0
+        ),
+        "mean_inference_latency_seconds": (
+            float(total_inference_time / inference_calls)
+            if inference_calls > 0
+            else 0.0
+        ),
+        "inference_duration_seconds": float(total_inference_time),
+        "episode_length_mean": float(np.mean(episode_lengths)),
+    }
+
+    scores = [s for s in episode_scores if s is not None]
     if scores:
         out["score_mean"] = float(np.mean(scores))
+
     return out
 
 

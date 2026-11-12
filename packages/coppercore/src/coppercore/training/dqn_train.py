@@ -99,4 +99,4 @@ def dqn_update(
     loss = train_step(
         policy_net, optimizer, dqn_mse, state_dev, (action_dev, y)
     )  # in-place update
-    return loss
+    return float(loss)

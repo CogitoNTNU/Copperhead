@@ -221,8 +221,11 @@ def test_real_gpu_layers_numerical_parity():
     assert isinstance(out_relu_gpu, cp.ndarray)
     np.testing.assert_allclose(to_numpy(out_relu_gpu), out_relu_cpu, rtol=1e-5, atol=1e-5)
 
-    dx_relu_cpu = relu_cpu.backward(d_y_cpu)
-    dx_relu_gpu = relu_gpu.backward(d_y_gpu)
+    d_y_relu_cpu = rng.standard_normal(out_relu_cpu.shape)
+    d_y_relu_gpu = to_device(d_y_relu_cpu, device="gpu")
+
+    dx_relu_cpu = relu_cpu.backward(d_y_relu_cpu)
+    dx_relu_gpu = relu_gpu.backward(d_y_relu_gpu)
     assert isinstance(dx_relu_gpu, cp.ndarray)
     np.testing.assert_allclose(to_numpy(dx_relu_gpu), dx_relu_cpu, rtol=1e-5, atol=1e-5)
 

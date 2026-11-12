@@ -25,7 +25,7 @@ def softmax_cross_entropy_loss(
 
     log_likelihood = -xp.log(probs[rows, y_true] + 1e-12)
 
-    loss = log_likelihood.mean()
+    loss = float(log_likelihood.mean())
 
     grad = probs.copy()
     grad[rows, y_true] -= 1

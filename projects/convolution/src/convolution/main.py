@@ -188,15 +188,37 @@ class DQNAgent(BaseAgent):
         for t, p in zip(self.Q_target.params(), self.Q_policy.params()):
             t.data[...] = p.data
 
-    def act(self, obs: np.ndarray, greedy: bool = False) -> int:
+    def act_batch(
+        self,
+        observations: np.ndarray,
+        greedy: bool = True,
+    ) -> np.ndarray:
+        """Execute batched policy-network inference across multiple observations.
+
+        Args:
+            observations: Batch of observations of shape (batch_size, *obs_shape).
+            greedy: Whether to choose greedy actions or use epsilon-greedy exploration.
+
+        Returns:
+            np.ndarray: Integer array of actions on CPU of shape (batch_size,).
+        """
+        batch_size = len(observations)
+        if batch_size == 0:
+            return np.empty(0, dtype=np.int64)
+
         if greedy or self.rng.random() >= self.epsilon:
-            # Exploit: run inference on selected device without unnecessary CPU transfers
-            obs_batch = obs[None, ...] if obs.ndim == len(self.obs_shape) else obs
-            obs_dev = to_device(obs_batch, device=self.device, dtype=self.dtype)
+            obs_dev = to_device(observations, device=self.device, dtype=self.dtype)
             q_values = self.Q_policy.predict(obs_dev)
             xp = get_array_module(q_values)
-            action = int(to_numpy(xp.argmax(q_values, axis=1))[0])
-            return action
+            actions_dev = xp.argmax(q_values, axis=1)
+            return to_numpy(actions_dev).astype(np.int64)
+        else:
+            return self.rng.integers(self.n_actions, size=batch_size, dtype=np.int64)
+
+    def act(self, obs: np.ndarray, greedy: bool = False) -> int:
+        if greedy or self.rng.random() >= self.epsilon:
+            obs_batch = obs[None, ...] if obs.ndim == len(self.obs_shape) else obs
+            return int(self.act_batch(obs_batch, greedy=True)[0])
         else:
             # Explore: skip neural network inference
             return int(self.rng.integers(self.n_actions))
