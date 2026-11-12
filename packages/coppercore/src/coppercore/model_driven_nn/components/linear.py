@@ -1,6 +1,6 @@
 import numpy as np
 
-from coppercore.shared import FloatArray
+from coppercore.shared import FloatArray, YamlMapping
 
 from ..parameter import Parameter
 from .base import Layer
@@ -34,3 +34,14 @@ class Linear(Layer):
 
     def params(self) -> list[Parameter]:
         return [self.W, self.b]
+
+    def to_config(self) -> YamlMapping:
+        return {
+            "type": "linear",
+            "output_dim": int(self.W.data.shape[1]),
+        }
+
+    def named_parameters(self, prefix: str = "") -> list[tuple[str, Parameter]]:
+        p_w = f"{prefix}.W" if prefix else "W"
+        p_b = f"{prefix}.b" if prefix else "b"
+        return [(p_w, self.W), (p_b, self.b)]
