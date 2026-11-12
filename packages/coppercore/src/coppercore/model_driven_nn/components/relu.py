@@ -1,7 +1,7 @@
 from typing import Any, Self
 
 from coppercore.backend import get_array_module, to_device
-from coppercore.shared import BoolArray, FloatArray
+from coppercore.shared import BoolArray, FloatArray, YamlMapping
 
 from .base import Activation
 
@@ -31,3 +31,6 @@ class ReLU(Activation):
         if self.mask is None:
             raise RuntimeError("ReLU.backward() called before forward()")
         return d_y * self.mask
+
+    def to_config(self) -> YamlMapping:
+        return {"type": "relu"}

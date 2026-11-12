@@ -3,8 +3,9 @@ from collections.abc import Iterable
 from functools import reduce
 
 from coppercore.backend import get_array_module
-from coppercore.shared import FloatArray
+from coppercore.shared import FloatArray, YamlMapping
 
+from ..parameter import Parameter
 from .base import Component, Structure
 
 
@@ -30,10 +31,7 @@ class Concat(Structure):
         if cache:
             self._branch_output_dims = branch_output_dims
 
-        if (
-            self.output_dims is not None
-            and self._branch_output_dims != self.output_dims
-        ):
+        if self.output_dims is not None and branch_output_dims != self.output_dims:
             raise ValueError(
                 "Concat branch output dimensions changed after construction"
             )
@@ -59,3 +57,16 @@ class Concat(Structure):
 
     def children(self) -> list[Component]:
         return self.branches
+
+    def to_config(self) -> YamlMapping:
+        return {
+            "type": "concat",
+            "paths": [branch.to_config() for branch in self.branches],
+        }
+
+    def named_parameters(self, prefix: str = "") -> list[tuple[str, Parameter]]:
+        named_params = []
+        for index, branch in enumerate(self.branches):
+            child_prefix = f"{prefix}.paths.{index}" if prefix else f"paths.{index}"
+            named_params.extend(branch.named_parameters(prefix=child_prefix))
+        return named_params

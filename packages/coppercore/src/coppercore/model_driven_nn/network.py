@@ -1,6 +1,8 @@
 from typing import Any, Self
+from collections.abc import Mapping
+from pathlib import Path
 
-from coppercore.shared import FloatArray, format_number
+from coppercore.shared import FloatArray, YamlMapping, format_number
 
 from .components import Structure
 from .parameter import Parameter
@@ -40,6 +42,54 @@ class Network:
     def zero_grad(self) -> None:
         for param in self.params():
             param.zero_grad()
+
+    def named_parameters(self, prefix: str = "model") -> list[tuple[str, Parameter]]:
+        return self.model.named_parameters(prefix=prefix)
+
+    def state_dict(self) -> dict[str, FloatArray]:
+        from .serialization import extract_state_dict
+
+        return extract_state_dict(self.named_parameters())
+
+    def load_state_dict(self, state_dict: Mapping[str, object]) -> None:
+        from .serialization import validate_and_load_state_dict
+
+        validate_and_load_state_dict(self.named_parameters(), state_dict)
+
+    def save_weights(self, path: str | Path) -> None:
+        from .serialization import save_weights_to_file
+
+        save_weights_to_file(path, self.state_dict())
+
+    def load_weights(self, path: str | Path) -> None:
+        from .serialization import load_weights_from_file
+
+        loaded = load_weights_from_file(path)
+        self.load_state_dict(loaded)
+
+    def to_config(self) -> YamlMapping:
+        return {
+            "name": self.name,
+            "input_dim": self.input_dim,
+            "output_dim": self.output_dim,
+            "model": self.model.to_config(),
+        }
+
+    def save_architecture(self, path: str | Path) -> None:
+        from .serialization import save_architecture_to_file
+
+        save_architecture_to_file(path, self.to_config())
+
+    def save_model(self, path: str | Path) -> None:
+        from .serialization import save_model_bundle
+
+        save_model_bundle(self, path)
+
+    @classmethod
+    def load_model(cls, path: str | Path) -> "Network":
+        from .serialization import load_model_bundle
+
+        return load_model_bundle(path)
 
     def to(self, device: str | None = None, dtype: Any = None) -> Self:
         self.model.to(device=device, dtype=dtype)

@@ -55,3 +55,6 @@ class Loader:
             )
 
         return Network(name, model, input_dim, actual_output_dim)
+
+    def load_model(self, path: str | Path) -> Network:
+        return Network.load_model(path)
