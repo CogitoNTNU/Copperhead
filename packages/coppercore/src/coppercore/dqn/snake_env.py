@@ -278,14 +278,13 @@ class SnakeEnv:
         length = len(body_coords)
         gradient = np.zeros(self.board.tiles.shape, dtype=np.float32)
 
-        if length > 1:
-            time_to_free = length - np.arange(length)
-            gradient = 1.0 - np.log(time_to_free) / np.log(self.width * self.height)
-        else:
-            values = np.zeros(length)
+        length = len(body_coords)
 
-        if length > 0:
-            gradient[body_coords[:, 0], body_coords[:, 1]] = values.astype(np.float32)
+        time_to_free = length - np.arange(length)
+
+        values = 1.0 - np.log(time_to_free) / np.log(self.width * self.height)
+
+        gradient[body_coords[:, 0], body_coords[:, 1]] = values.astype(np.float32)
 
         # Pad the board with a layer of walls:
         # - Head, Apple, and Gradient channels are padded with 0.0
