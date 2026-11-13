@@ -294,8 +294,8 @@ def _is_wandb_disabled(run: Any) -> bool:
 
 
 def make_checkpoint_callback(
-    checkpoint_interval: int = 25_000,
-    wandb_checkpoint_interval: int = 100_000,
+    checkpoint_interval: int = 100_000,
+    wandb_checkpoint_interval: int = 1_000_000,
     checkpoints_dir: Path | str = "checkpoints",
 ):
     base_dir = Path(checkpoints_dir)
@@ -415,13 +415,13 @@ def parse_args(args: list[str] | None = None):
     parser.add_argument(
         "--checkpoint-interval",
         type=int,
-        default=25_000,
+        default=100_000,
         help="Local checkpoint interval in steps (0 to disable).",
     )
     parser.add_argument(
         "--wandb-checkpoint-interval",
         type=int,
-        default=100_000,
+        default=1_000_000,
         help="W&B artifact checkpoint interval in steps (0 to disable).",
     )
     parser.add_argument(
