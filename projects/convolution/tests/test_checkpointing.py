@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-
 from convolution.main import (
     DQNAgent,
     make_checkpoint_callback,
@@ -210,7 +209,6 @@ def test_interrupted_run_saves_and_uploads_final_checkpoint(tmp_path, dummy_agen
         call_count += 1
         if call_count == 5:
             raise KeyboardInterrupt()
-        return None
 
     dummy_agent.observe = mock_observe
 
@@ -354,7 +352,6 @@ def test_sigterm_handling(tmp_path, dummy_agent):
         if step_counter == 3:
             # Send SIGTERM to self
             os.kill(os.getpid(), signal.SIGTERM)
-        return None
 
     dummy_agent.observe = mock_observe
 
@@ -445,8 +442,9 @@ def test_checkpoint_cleanup_waits_for_wandb_artifact(
 
 
 def test_parse_args_custom_intervals():
-    from convolution.main import parse_args
     import sys
+
+    from convolution.main import parse_args
 
     test_args = [
         "prog",

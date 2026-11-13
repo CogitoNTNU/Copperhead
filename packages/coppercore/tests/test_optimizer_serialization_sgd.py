@@ -1,5 +1,4 @@
 import numpy as np
-
 from coppercore.model_driven_nn.components import Linear, Sequential
 from coppercore.model_driven_nn.network import Network
 from coppercore.optimizer.sgd import SGD

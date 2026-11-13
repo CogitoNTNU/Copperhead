@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Protocol
 
 import numpy as np
-import wandb
 from tqdm import trange
+
+import wandb
 
 
 # required agent structure
@@ -197,7 +198,10 @@ def train(
 
             # log episode when it's over (died or timed out)
             if terminated or truncated:
-                log = {"episode/return": episode_return, "episode/length": episode_length}
+                log = {
+                    "episode/return": episode_return,
+                    "episode/length": episode_length,
+                }
 
                 if "score" in info:
                     log["episode/score"] = info["score"]

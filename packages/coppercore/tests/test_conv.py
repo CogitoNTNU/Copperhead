@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from coppercore.cli.flattening import flatten_yaml
 from coppercore.cli.graphing import graph_yaml
 from coppercore.model_driven_nn import Network

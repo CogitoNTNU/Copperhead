@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
-
 from coppercore.model_driven_nn.components import Linear, Sequential
 from coppercore.model_driven_nn.network import Network
 from coppercore.model_driven_nn.parameter import Parameter

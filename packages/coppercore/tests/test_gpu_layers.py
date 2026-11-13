@@ -47,7 +47,17 @@ def test_network_and_components_to_dtype():
                 MaxPool2D(kernel_size=2),
                 Concat(
                     [
-                        Sequential([Conv2D(in_channels=4, out_channels=4, kernel_size=3, padding=1), ReLU()]),
+                        Sequential(
+                            [
+                                Conv2D(
+                                    in_channels=4,
+                                    out_channels=4,
+                                    kernel_size=3,
+                                    padding=1,
+                                ),
+                                ReLU(),
+                            ]
+                        ),
                         Conv2D(in_channels=4, out_channels=4, kernel_size=1),
                     ]
                 ),
@@ -206,8 +216,12 @@ def test_real_gpu_layers_numerical_parity():
     dx_gpu = fc_gpu.backward(d_y_gpu)
     assert isinstance(dx_gpu, cp.ndarray)
     np.testing.assert_allclose(to_numpy(dx_gpu), dx_cpu, rtol=1e-5, atol=1e-5)
-    np.testing.assert_allclose(to_numpy(fc_gpu.W.grad), fc_cpu.W.grad, rtol=1e-5, atol=1e-5)
-    np.testing.assert_allclose(to_numpy(fc_gpu.b.grad), fc_cpu.b.grad, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(
+        to_numpy(fc_gpu.W.grad), fc_cpu.W.grad, rtol=1e-5, atol=1e-5
+    )
+    np.testing.assert_allclose(
+        to_numpy(fc_gpu.b.grad), fc_cpu.b.grad, rtol=1e-5, atol=1e-5
+    )
 
     # 2. ReLU
     relu_cpu = ReLU()
@@ -219,7 +233,9 @@ def test_real_gpu_layers_numerical_parity():
     out_relu_cpu = relu_cpu.forward(x_relu_cpu, cache=True)
     out_relu_gpu = relu_gpu.forward(x_relu_gpu, cache=True)
     assert isinstance(out_relu_gpu, cp.ndarray)
-    np.testing.assert_allclose(to_numpy(out_relu_gpu), out_relu_cpu, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(
+        to_numpy(out_relu_gpu), out_relu_cpu, rtol=1e-5, atol=1e-5
+    )
 
     d_y_relu_cpu = rng.standard_normal(out_relu_cpu.shape)
     d_y_relu_gpu = to_device(d_y_relu_cpu, device="gpu")
@@ -230,8 +246,12 @@ def test_real_gpu_layers_numerical_parity():
     np.testing.assert_allclose(to_numpy(dx_relu_gpu), dx_relu_cpu, rtol=1e-5, atol=1e-5)
 
     # 3. Conv2D
-    conv_cpu = Conv2D(in_channels=2, out_channels=3, kernel_size=3, padding=1, stride=1, seed=123)
-    conv_gpu = Conv2D(in_channels=2, out_channels=3, kernel_size=3, padding=1, stride=1, seed=123)
+    conv_cpu = Conv2D(
+        in_channels=2, out_channels=3, kernel_size=3, padding=1, stride=1, seed=123
+    )
+    conv_gpu = Conv2D(
+        in_channels=2, out_channels=3, kernel_size=3, padding=1, stride=1, seed=123
+    )
     conv_gpu.to(device="gpu")
 
     x_conv_cpu = rng.standard_normal((2, 2, 6, 6))
@@ -240,7 +260,9 @@ def test_real_gpu_layers_numerical_parity():
     out_conv_cpu = conv_cpu.forward(x_conv_cpu, cache=True)
     out_conv_gpu = conv_gpu.forward(x_conv_gpu, cache=True)
     assert isinstance(out_conv_gpu, cp.ndarray)
-    np.testing.assert_allclose(to_numpy(out_conv_gpu), out_conv_cpu, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(
+        to_numpy(out_conv_gpu), out_conv_cpu, rtol=1e-5, atol=1e-5
+    )
 
     d_out_conv_cpu = rng.standard_normal(out_conv_cpu.shape)
     d_out_conv_gpu = to_device(d_out_conv_cpu, device="gpu")
@@ -249,8 +271,12 @@ def test_real_gpu_layers_numerical_parity():
     dx_conv_gpu = conv_gpu.backward(d_out_conv_gpu)
     assert isinstance(dx_conv_gpu, cp.ndarray)
     np.testing.assert_allclose(to_numpy(dx_conv_gpu), dx_conv_cpu, rtol=1e-5, atol=1e-5)
-    np.testing.assert_allclose(to_numpy(conv_gpu.W.grad), conv_cpu.W.grad, rtol=1e-5, atol=1e-5)
-    np.testing.assert_allclose(to_numpy(conv_gpu.b.grad), conv_cpu.b.grad, rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(
+        to_numpy(conv_gpu.W.grad), conv_cpu.W.grad, rtol=1e-5, atol=1e-5
+    )
+    np.testing.assert_allclose(
+        to_numpy(conv_gpu.b.grad), conv_cpu.b.grad, rtol=1e-5, atol=1e-5
+    )
 
     # 4. MaxPool2D
     max_cpu = MaxPool2D(kernel_size=2, stride=2, padding=0)
@@ -380,28 +406,59 @@ def test_mocked_cupy_network_to_gpu():
 
     mock_cp.ndarray = MockCupyArray
     mock_cp.asarray.side_effect = lambda a, **kwargs: (
-        a if isinstance(a, MockCupyArray) else MockCupyArray(a, dtype=kwargs.get("dtype"))
+        a
+        if isinstance(a, MockCupyArray)
+        else MockCupyArray(a, dtype=kwargs.get("dtype"))
     )
-    mock_cp.asnumpy.side_effect = lambda a: np.asarray(a.data) if isinstance(a, MockCupyArray) else np.asarray(a)
+    mock_cp.asnumpy.side_effect = lambda a: (
+        np.asarray(a.data) if isinstance(a, MockCupyArray) else np.asarray(a)
+    )
     mock_cp.zeros_like.side_effect = lambda a: MockCupyArray(np.zeros_like(a.data))
-    mock_cp.zeros.side_effect = lambda shape, dtype=None: MockCupyArray(np.zeros(shape, dtype=dtype))
-    mock_cp.empty.side_effect = lambda shape, dtype=None: MockCupyArray(np.empty(shape, dtype=dtype))
-    mock_cp.dot.side_effect = lambda a, b: MockCupyArray(np.dot(a.data if isinstance(a, MockCupyArray) else a, b.data if isinstance(b, MockCupyArray) else b))
-    mock_cp.sum.side_effect = lambda a, axis=None: MockCupyArray(np.sum(a.data if isinstance(a, MockCupyArray) else a, axis=axis))
-    mock_cp.mean.side_effect = lambda a, axis=None: MockCupyArray(np.mean(a.data if isinstance(a, MockCupyArray) else a, axis=axis))
-    mock_cp.maximum.side_effect = lambda a, b: MockCupyArray(np.maximum(a.data if isinstance(a, MockCupyArray) else a, b))
-    mock_cp.pad.side_effect = lambda a, pad_width, mode="constant", **kwargs: MockCupyArray(np.pad(a.data, pad_width, mode=mode, **kwargs))
+    mock_cp.zeros.side_effect = lambda shape, dtype=None: MockCupyArray(
+        np.zeros(shape, dtype=dtype)
+    )
+    mock_cp.empty.side_effect = lambda shape, dtype=None: MockCupyArray(
+        np.empty(shape, dtype=dtype)
+    )
+    mock_cp.dot.side_effect = lambda a, b: MockCupyArray(
+        np.dot(
+            a.data if isinstance(a, MockCupyArray) else a,
+            b.data if isinstance(b, MockCupyArray) else b,
+        )
+    )
+    mock_cp.sum.side_effect = lambda a, axis=None: MockCupyArray(
+        np.sum(a.data if isinstance(a, MockCupyArray) else a, axis=axis)
+    )
+    mock_cp.mean.side_effect = lambda a, axis=None: MockCupyArray(
+        np.mean(a.data if isinstance(a, MockCupyArray) else a, axis=axis)
+    )
+    mock_cp.maximum.side_effect = lambda a, b: MockCupyArray(
+        np.maximum(a.data if isinstance(a, MockCupyArray) else a, b)
+    )
+    mock_cp.pad.side_effect = lambda a, pad_width, mode="constant", **kwargs: (
+        MockCupyArray(np.pad(a.data, pad_width, mode=mode, **kwargs))
+    )
     mock_cp.arange.side_effect = lambda *args: MockCupyArray(np.arange(*args))
-    mock_cp.argmax.side_effect = lambda a, axis=None: MockCupyArray(np.argmax(a.data if isinstance(a, MockCupyArray) else a, axis=axis))
-    mock_cp.tile.side_effect = lambda a, reps: MockCupyArray(np.tile(a.data if isinstance(a, MockCupyArray) else a, reps))
-    mock_cp.concatenate.side_effect = lambda items, axis=0: MockCupyArray(np.concatenate([i.data for i in items], axis=axis))
-    mock_cp.split.side_effect = lambda ary, indices, axis=0: [MockCupyArray(s) for s in np.split(ary.data, indices, axis=axis)]
+    mock_cp.argmax.side_effect = lambda a, axis=None: MockCupyArray(
+        np.argmax(a.data if isinstance(a, MockCupyArray) else a, axis=axis)
+    )
+    mock_cp.tile.side_effect = lambda a, reps: MockCupyArray(
+        np.tile(a.data if isinstance(a, MockCupyArray) else a, reps)
+    )
+    mock_cp.concatenate.side_effect = lambda items, axis=0: MockCupyArray(
+        np.concatenate([i.data for i in items], axis=axis)
+    )
+    mock_cp.split.side_effect = lambda ary, indices, axis=0: [
+        MockCupyArray(s) for s in np.split(ary.data, indices, axis=axis)
+    ]
     mock_cp.inf = np.inf
 
     mock_add = MagicMock()
     mock_add.at = lambda a, indices, b: np.add.at(
         a.data,
-        tuple(i.data if isinstance(i, MockCupyArray) else i for i in indices) if isinstance(indices, tuple) else (indices.data if isinstance(indices, MockCupyArray) else indices),
+        tuple(i.data if isinstance(i, MockCupyArray) else i for i in indices)
+        if isinstance(indices, tuple)
+        else (indices.data if isinstance(indices, MockCupyArray) else indices),
         b.data if isinstance(b, MockCupyArray) else b,
     )
     mock_cp.add = mock_add
@@ -511,7 +568,9 @@ def test_real_gpu_optimizers_and_losses():
     adam_cpu.parameters = [p_cpu]
     adam_cpu.step()
 
-    p_gpu = Parameter.from_data(to_device(np.array([1.0, 2.0, 3.0], dtype=np.float32), device="gpu"))
+    p_gpu = Parameter.from_data(
+        to_device(np.array([1.0, 2.0, 3.0], dtype=np.float32), device="gpu")
+    )
     p_gpu.grad = to_device(np.array([0.1, 0.2, 0.3], dtype=np.float32), device="gpu")
     adam_gpu = ADAM(learning_rate=0.01)
     adam_gpu.parameters = [p_gpu]

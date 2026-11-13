@@ -1,7 +1,7 @@
 import json
+
 import numpy as np
 import pytest
-
 from coppercore.model_driven_nn.components import Linear, Sequential
 from coppercore.model_driven_nn.components.base import Component
 from coppercore.model_driven_nn.network import Network

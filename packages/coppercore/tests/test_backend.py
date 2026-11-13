@@ -93,16 +93,21 @@ def test_get_array_module_cpu():
 
 def test_get_array_module_mixed_devices_error():
     """Test get_array_module raises TypeError on mixed NumPy and CuPy inputs."""
+
     class MockCupyArray:
         __module__ = "cupy.ndarray"
 
     cp_arr = MockCupyArray()
     np_arr = np.array([1.0, 2.0])
 
-    with pytest.raises(TypeError, match="Mixed device arrays passed to get_array_module"):
+    with pytest.raises(
+        TypeError, match="Mixed device arrays passed to get_array_module"
+    ):
         get_array_module(cp_arr, np_arr)
 
-    with pytest.raises(TypeError, match="Mixed device arrays passed to get_array_module"):
+    with pytest.raises(
+        TypeError, match="Mixed device arrays passed to get_array_module"
+    ):
         get_array_module(np_arr, cp_arr)
 
 
@@ -195,9 +200,13 @@ def test_mock_cupy_gpu_flow():
 
     mock_cp.ndarray = MockCupyArray
     mock_cp.asarray.side_effect = lambda a, **kwargs: (
-        a if isinstance(a, MockCupyArray) else MockCupyArray(a, dtype=kwargs.get("dtype"))
+        a
+        if isinstance(a, MockCupyArray)
+        else MockCupyArray(a, dtype=kwargs.get("dtype"))
     )
-    mock_cp.asnumpy.side_effect = lambda a: np.asarray(a.data) if isinstance(a, MockCupyArray) else np.asarray(a)
+    mock_cp.asnumpy.side_effect = lambda a: (
+        np.asarray(a.data) if isinstance(a, MockCupyArray) else np.asarray(a)
+    )
     mock_cp.zeros_like.side_effect = lambda a: MockCupyArray(np.zeros_like(a.data))
 
     with patch.dict("sys.modules", {"cupy": mock_cp}):

@@ -7,13 +7,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-
-# Ensure projects are importable
-root_dir = Path(__file__).resolve().parents[1]
-conv_src = root_dir / "projects" / "convolution" / "src"
-if str(conv_src) not in sys.path:
-    sys.path.insert(0, str(conv_src))
-
 from coppercore.backend import is_gpu_available, to_device
 from coppercore.buffer import ReplayBuffer
 from coppercore.model_driven_nn import Network
@@ -28,6 +21,12 @@ from coppercore.model_driven_nn.components import (
 from coppercore.optimizer import ADAM, SGD
 from coppercore.training.dqn_train import dqn_update
 from coppercore.training.mnist_train import softmax_cross_entropy_loss
+
+# Ensure projects are importable
+root_dir = Path(__file__).resolve().parents[1]
+conv_src = root_dir / "projects" / "convolution" / "src"
+if str(conv_src) not in sys.path:
+    sys.path.insert(0, str(conv_src))
 
 
 def sync_device(device: str) -> None:
@@ -201,7 +200,13 @@ def benchmark_snake_dqn_inference(
         "snake-dqn",
         Sequential(
             [
-                Conv2D(1, conv_out_channels, kernel_size=3, padding=1, input_shape=(1, 8, 8)),
+                Conv2D(
+                    1,
+                    conv_out_channels,
+                    kernel_size=3,
+                    padding=1,
+                    input_shape=(1, 8, 8),
+                ),
                 ReLU(),
                 Flatten(),
                 Linear(conv_flat_dim, 128),
@@ -253,7 +258,13 @@ def benchmark_snake_dqn_update(
         "snake-dqn-policy",
         Sequential(
             [
-                Conv2D(1, conv_out_channels, kernel_size=3, padding=1, input_shape=(1, 8, 8)),
+                Conv2D(
+                    1,
+                    conv_out_channels,
+                    kernel_size=3,
+                    padding=1,
+                    input_shape=(1, 8, 8),
+                ),
                 ReLU(),
                 Flatten(),
                 Linear(conv_flat_dim, 128),
@@ -270,7 +281,13 @@ def benchmark_snake_dqn_update(
         "snake-dqn-target",
         Sequential(
             [
-                Conv2D(1, conv_out_channels, kernel_size=3, padding=1, input_shape=(1, 8, 8)),
+                Conv2D(
+                    1,
+                    conv_out_channels,
+                    kernel_size=3,
+                    padding=1,
+                    input_shape=(1, 8, 8),
+                ),
                 ReLU(),
                 Flatten(),
                 Linear(conv_flat_dim, 128),
@@ -290,7 +307,9 @@ def benchmark_snake_dqn_update(
     opt.parameters = policy.params()
     opt.to(device=device, dtype=dtype)
 
-    buf = ReplayBuffer(capacity=batch_size * 2, obs_shape=obs_shape, obs_dtype=np.float32)
+    buf = ReplayBuffer(
+        capacity=batch_size * 2, obs_shape=obs_shape, obs_dtype=np.float32
+    )
     rng = np.random.default_rng(42)
 
     for _ in range(batch_size * 2):
@@ -302,13 +321,17 @@ def benchmark_snake_dqn_update(
         buf.add(s, a, r, s_next, term)
 
     for _ in range(warmup):
-        dqn_update(policy, target, opt, buf, batch_size, 0.99, rng, device=device, dtype=dtype)
+        dqn_update(
+            policy, target, opt, buf, batch_size, 0.99, rng, device=device, dtype=dtype
+        )
     sync_device(device)
 
     timings = []
     for _ in range(iterations):
         t0 = time.perf_counter()
-        dqn_update(policy, target, opt, buf, batch_size, 0.99, rng, device=device, dtype=dtype)
+        dqn_update(
+            policy, target, opt, buf, batch_size, 0.99, rng, device=device, dtype=dtype
+        )
         sync_device(device)
         t1 = time.perf_counter()
         timings.append((t1 - t0) * 1000.0)
@@ -373,19 +396,51 @@ def run_benchmarks(dtype: Any = np.float32) -> None:
     print("=" * 80)
 
     benchmarks = [
-        ("Linear Fwd+Bwd (1024->1024, B=128)", lambda d, t: benchmark_linear(device=d, dtype=t)),
-        ("Conv2D Fwd+Bwd (16->32, 28x28, B=32)", lambda d, t: benchmark_conv2d(device=d, dtype=t)),
-        ("MaxPool2D Fwd+Bwd (32ch, 28x28, B=32)", lambda d, t: benchmark_maxpool2d(device=d, dtype=t)),
-        ("ADAM Optimizer Step (500k params)", lambda d, t: benchmark_adam(device=d, dtype=t)),
-        ("MLP End-to-End Train Step (B=128)", lambda d, t: benchmark_train_step(device=d, dtype=t)),
-        ("Snake DQN 1-State Inference (1x8x8)", lambda d, t: benchmark_snake_dqn_inference(device=d, dtype=t)),
-        ("Snake DQN Update (B=64)", lambda d, t: benchmark_snake_dqn_update(batch_size=64, device=d, dtype=t)),
-        ("Snake DQN Update (B=128)", lambda d, t: benchmark_snake_dqn_update(batch_size=128, device=d, dtype=t)),
-        ("Snake DQN Update (B=256)", lambda d, t: benchmark_snake_dqn_update(batch_size=256, device=d, dtype=t)),
-        ("Snake DQN Update (B=512)", lambda d, t: benchmark_snake_dqn_update(batch_size=512, device=d, dtype=t)),
+        (
+            "Linear Fwd+Bwd (1024->1024, B=128)",
+            lambda d, t: benchmark_linear(device=d, dtype=t),
+        ),
+        (
+            "Conv2D Fwd+Bwd (16->32, 28x28, B=32)",
+            lambda d, t: benchmark_conv2d(device=d, dtype=t),
+        ),
+        (
+            "MaxPool2D Fwd+Bwd (32ch, 28x28, B=32)",
+            lambda d, t: benchmark_maxpool2d(device=d, dtype=t),
+        ),
+        (
+            "ADAM Optimizer Step (500k params)",
+            lambda d, t: benchmark_adam(device=d, dtype=t),
+        ),
+        (
+            "MLP End-to-End Train Step (B=128)",
+            lambda d, t: benchmark_train_step(device=d, dtype=t),
+        ),
+        (
+            "Snake DQN 1-State Inference (1x8x8)",
+            lambda d, t: benchmark_snake_dqn_inference(device=d, dtype=t),
+        ),
+        (
+            "Snake DQN Update (B=64)",
+            lambda d, t: benchmark_snake_dqn_update(batch_size=64, device=d, dtype=t),
+        ),
+        (
+            "Snake DQN Update (B=128)",
+            lambda d, t: benchmark_snake_dqn_update(batch_size=128, device=d, dtype=t),
+        ),
+        (
+            "Snake DQN Update (B=256)",
+            lambda d, t: benchmark_snake_dqn_update(batch_size=256, device=d, dtype=t),
+        ),
+        (
+            "Snake DQN Update (B=512)",
+            lambda d, t: benchmark_snake_dqn_update(batch_size=512, device=d, dtype=t),
+        ),
     ]
 
-    header = f"{'Benchmark Task':<48} | {'CPU (ms)':<10} | {'GPU (ms)':<10} | {'Speedup':<8}"
+    header = (
+        f"{'Benchmark Task':<48} | {'CPU (ms)':<10} | {'GPU (ms)':<10} | {'Speedup':<8}"
+    )
     print(header)
     print("-" * len(header))
 
@@ -405,7 +460,9 @@ def run_benchmarks(dtype: Any = np.float32) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Benchmark CPU vs GPU performance in Copperhead.")
+    parser = argparse.ArgumentParser(
+        description="Benchmark CPU vs GPU performance in Copperhead."
+    )
     parser.add_argument(
         "--dtype",
         choices=["float32", "float64"],

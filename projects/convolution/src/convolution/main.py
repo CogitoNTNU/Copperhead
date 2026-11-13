@@ -1,11 +1,10 @@
 import argparse
-from pathlib import Path
 import shutil
-from typing import Any
 import uuid
+from pathlib import Path
+from typing import Any
 
 import numpy as np
-import wandb
 from coppercore.backend import get_array_module, is_gpu_available, to_device, to_numpy
 from coppercore.buffer import ReplayBuffer
 from coppercore.dqn.base_agent import BaseAgent
@@ -22,6 +21,8 @@ from coppercore.model_driven_nn.network import Network
 from coppercore.optimizer import ADAM
 from coppercore.training.dqn_harness import train
 from coppercore.training.dqn_train import dqn_update
+
+import wandb
 
 REWARDS = {Event.MOVED: -0.0001, Event.ATE: 1.0, Event.DIED: -10.0, Event.WON: 100.0}
 
@@ -105,65 +106,50 @@ class DQNAgent(BaseAgent):
         )
 
         in_channels = obs_shape[0] if len(obs_shape) == 3 else 1
-        conv_h, conv_w = (
-            (obs_shape[1], obs_shape[2])
-            if len(obs_shape) == 3
-            else (
-                (obs_shape[0], obs_shape[1])
-                if len(obs_shape) == 2
-                else (1, obs_shape[0])
-            )
-        )
-        conv_out_channels = 16
-        conv_flat_dim = conv_out_channels * conv_h * conv_w
-        total_dim = int(np.prod(obs_shape))
-
 
         def make_q_network(name):
             return Network(
                 name,
-                Sequential([
-                    Conv2D(
-                        in_channels=in_channels,
-                        out_channels=16,
-                        kernel_size=3,
-                        stride=1,
-                        padding=1,
-                        input_shape=(in_channels, 22, 22),
-                    ),
-                    ReLU(),
-
-                    Conv2D(
-                        in_channels=16,
-                        out_channels=32,
-                        kernel_size=3,
-                        stride=2,
-                        padding=1,
-                        input_shape=(16, 22, 22),
-                    ),
-                    ReLU(),
-
-                    Conv2D(
-                        in_channels=32,
-                        out_channels=32,
-                        kernel_size=3,
-                        stride=2,
-                        padding=1,
-                        input_shape=(32, 11, 11),
-                    ),
-                    ReLU(),
-
-                    Flatten(),
-                    Linear(32 * 6 * 6, 320),
-                    ReLU(),
-                    Linear(320, 64),
-                    ReLU(),
-                    Linear(64, 4),
-                ]),
+                Sequential(
+                    [
+                        Conv2D(
+                            in_channels=in_channels,
+                            out_channels=16,
+                            kernel_size=3,
+                            stride=1,
+                            padding=1,
+                            input_shape=(in_channels, 22, 22),
+                        ),
+                        ReLU(),
+                        Conv2D(
+                            in_channels=16,
+                            out_channels=32,
+                            kernel_size=3,
+                            stride=2,
+                            padding=1,
+                            input_shape=(16, 22, 22),
+                        ),
+                        ReLU(),
+                        Conv2D(
+                            in_channels=32,
+                            out_channels=32,
+                            kernel_size=3,
+                            stride=2,
+                            padding=1,
+                            input_shape=(32, 11, 11),
+                        ),
+                        ReLU(),
+                        Flatten(),
+                        Linear(32 * 6 * 6, 320),
+                        ReLU(),
+                        Linear(320, 64),
+                        ReLU(),
+                        Linear(64, 4),
+                    ]
+                ),
                 input_dim=in_channels * 22 * 22,
                 output_dim=4,
             )
-
 
         self.Q_policy = make_q_network(f"{name}-policy")
         self.Q_target = make_q_network(f"{name}-target")
@@ -289,19 +275,23 @@ def make_checkpoint_callback(
     last_saved_step: int | None = None
     last_uploaded_step: int | None = None
 
-    def callback(step: int, agent: Any, run: Any = None, is_final: bool = False) -> None:
+    def callback(
+        step: int, agent: Any, run: Any = None, is_final: bool = False
+    ) -> None:
         nonlocal run_id, run_dir, last_saved_step, last_uploaded_step
 
         if run_dir is None:
             run_id = getattr(run, "id", None) or f"run_{uuid.uuid4().hex[:8]}"
             run_dir = base_dir / run_id
 
-        local_save_due = (checkpoint_interval > 0 and step % checkpoint_interval == 0) or is_final
+        local_save_due = (
+            checkpoint_interval > 0 and step % checkpoint_interval == 0
+        ) or is_final
         wandb_enabled = not _is_wandb_disabled(run) and hasattr(run, "log_artifact")
         wandb_upload_due = (
-            ((wandb_checkpoint_interval > 0 and step % wandb_checkpoint_interval == 0) or is_final)
-            and wandb_enabled
-        )
+            (wandb_checkpoint_interval > 0 and step % wandb_checkpoint_interval == 0)
+            or is_final
+        ) and wandb_enabled
 
         if not local_save_due and not wandb_upload_due:
             return
@@ -327,7 +317,9 @@ def make_checkpoint_callback(
             )
             artifact.add_dir(str(step_dir))
             logged_artifact = run.log_artifact(artifact)
-            artifact_to_wait = logged_artifact if logged_artifact is not None else artifact
+            artifact_to_wait = (
+                logged_artifact if logged_artifact is not None else artifact
+            )
             if hasattr(artifact_to_wait, "wait") and callable(artifact_to_wait.wait):
                 try:
                     artifact_to_wait.wait()

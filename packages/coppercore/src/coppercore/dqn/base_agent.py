@@ -14,9 +14,7 @@ class BaseAgent:
     def act(self, obs: np.ndarray, greedy: bool = False) -> int:
         return int(self.rng.integers(self.n_actions))
 
-    def act_batch(
-        self, observations: np.ndarray, greedy: bool = True
-    ) -> np.ndarray:
+    def act_batch(self, observations: np.ndarray, greedy: bool = True) -> np.ndarray:
         batch_size = len(observations)
         if batch_size == 0:
             return np.empty(0, dtype=np.int64)

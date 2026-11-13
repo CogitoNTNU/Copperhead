@@ -5,17 +5,16 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from convolution.main import DQNAgent, make_snake_env
+from coppercore.backend import is_gpu_available, to_device
+from coppercore.dqn.base_agent import BaseAgent
+from coppercore.training.dqn_harness import evaluate
 
 # Ensure projects/convolution is importable
 root_dir = Path(__file__).resolve().parents[3]
 conv_src = root_dir / "projects" / "convolution" / "src"
 if str(conv_src) not in sys.path:
     sys.path.insert(0, str(conv_src))
-
-from convolution.main import DQNAgent, make_snake_env
-from coppercore.backend import is_gpu_available, to_device
-from coppercore.dqn.base_agent import BaseAgent
-from coppercore.training.dqn_harness import evaluate
 
 
 @pytest.fixture(autouse=True)
@@ -110,9 +109,7 @@ def test_batched_evaluation_matches_sequential_cpu():
         seq_res = sequential_evaluate_reference(
             agent, make_snake_env, n_episodes=n_episodes, seed=10_000
         )
-        batch_res = evaluate(
-            agent, make_snake_env, n_episodes=n_episodes, seed=10_000
-        )
+        batch_res = evaluate(agent, make_snake_env, n_episodes=n_episodes, seed=10_000)
 
         assert np.isclose(batch_res["return_mean"], seq_res["return_mean"])
         if "score_mean" in seq_res:
@@ -196,7 +193,9 @@ class MockDeterministicEnv:
 def test_completed_environments_never_stepped_again():
     """Verify completed environments are excluded from subsequent steps."""
     step_limits = [2, 5, 1, 8, 3]
-    env_pool = [MockDeterministicEnv(limit, score=i) for i, limit in enumerate(step_limits)]
+    env_pool = [
+        MockDeterministicEnv(limit, score=i) for i, limit in enumerate(step_limits)
+    ]
 
     created = 0
 

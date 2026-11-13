@@ -1,6 +1,6 @@
+import tempfile
 from collections.abc import Mapping
 from pathlib import Path
-import tempfile
 
 import yaml
 

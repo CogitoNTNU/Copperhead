@@ -7,16 +7,15 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from convolution.main import DQNAgent, make_snake_env
+from coppercore.backend import is_gpu_available, to_device
+from coppercore.training.dqn_harness import evaluate
 
 # Ensure projects are importable
 root_dir = Path(__file__).resolve().parents[1]
 conv_src = root_dir / "projects" / "convolution" / "src"
 if str(conv_src) not in sys.path:
     sys.path.insert(0, str(conv_src))
-
-from convolution.main import DQNAgent, make_snake_env
-from coppercore.backend import is_gpu_available, to_device
-from coppercore.training.dqn_harness import evaluate
 
 
 def sync_device(device: str) -> None:
@@ -30,7 +29,9 @@ def sync_device(device: str) -> None:
             pass
 
 
-def sequential_evaluate(agent, make_env, n_episodes: int = 20, seed: int = 10_000) -> dict:
+def sequential_evaluate(
+    agent, make_env, n_episodes: int = 20, seed: int = 10_000
+) -> dict:
     """Sequential baseline evaluation harness."""
     start_time = time.perf_counter()
     env = make_env()
@@ -76,7 +77,9 @@ def sequential_evaluate(agent, make_env, n_episodes: int = 20, seed: int = 10_00
         "inference_calls": inference_calls,
         "mean_inference_batch_size": 1.0,
         "mean_inference_latency_seconds": (
-            float(total_inference_time / inference_calls) if inference_calls > 0 else 0.0
+            float(total_inference_time / inference_calls)
+            if inference_calls > 0
+            else 0.0
         ),
         "inference_duration_seconds": float(total_inference_time),
     }
@@ -122,7 +125,9 @@ def run_evaluation_benchmark(
             device="gpu",
             dtype=dtype,
         )
-        for p_gpu, p_cpu in zip(agent_gpu.Q_policy.params(), agent_cpu.Q_policy.params()):
+        for p_gpu, p_cpu in zip(
+            agent_gpu.Q_policy.params(), agent_cpu.Q_policy.params()
+        ):
             p_gpu.data = to_device(p_cpu.data.copy(), device="gpu", dtype=dtype)
     else:
         agent_gpu = None
@@ -160,7 +165,9 @@ def run_evaluation_benchmark(
         res_bat_cpu = evaluate(
             agent_cpu, make_snake_env, n_episodes=n_episodes, seed=seed
         )
-        speedup_cpu = res_seq_cpu["duration_seconds"] / max(res_bat_cpu["duration_seconds"], 1e-9)
+        speedup_cpu = res_seq_cpu["duration_seconds"] / max(
+            res_bat_cpu["duration_seconds"], 1e-9
+        )
         print(
             f"{n_episodes:<10} | {'Batched CPU':<18} | {res_bat_cpu['duration_seconds']:<14.4f} "
             f"| {res_bat_cpu['total_transitions']:<8} | {res_bat_cpu['mean_inference_batch_size']:<10.1f} "
@@ -173,7 +180,9 @@ def run_evaluation_benchmark(
             res_seq_gpu = sequential_evaluate(
                 agent_gpu, make_snake_env, n_episodes=n_episodes, seed=seed
             )
-            speedup_seq_gpu = res_seq_cpu["duration_seconds"] / max(res_seq_gpu["duration_seconds"], 1e-9)
+            speedup_seq_gpu = res_seq_cpu["duration_seconds"] / max(
+                res_seq_gpu["duration_seconds"], 1e-9
+            )
             print(
                 f"{n_episodes:<10} | {'Seq GPU':<18} | {res_seq_gpu['duration_seconds']:<14.4f} "
                 f"| {res_seq_gpu['total_transitions']:<8} | {res_seq_gpu['mean_inference_batch_size']:<10.1f} "
@@ -185,8 +194,12 @@ def run_evaluation_benchmark(
             res_bat_gpu = evaluate(
                 agent_gpu, make_snake_env, n_episodes=n_episodes, seed=seed
             )
-            speedup_bat_gpu = res_seq_gpu["duration_seconds"] / max(res_bat_gpu["duration_seconds"], 1e-9)
-            speedup_vs_seq_cpu = res_seq_cpu["duration_seconds"] / max(res_bat_gpu["duration_seconds"], 1e-9)
+            speedup_bat_gpu = res_seq_gpu["duration_seconds"] / max(
+                res_bat_gpu["duration_seconds"], 1e-9
+            )
+            speedup_vs_seq_cpu = res_seq_cpu["duration_seconds"] / max(
+                res_bat_gpu["duration_seconds"], 1e-9
+            )
             print(
                 f"{n_episodes:<10} | {'Batched GPU':<18} | {res_bat_gpu['duration_seconds']:<14.4f} "
                 f"| {res_bat_gpu['total_transitions']:<8} | {res_bat_gpu['mean_inference_batch_size']:<10.1f} "

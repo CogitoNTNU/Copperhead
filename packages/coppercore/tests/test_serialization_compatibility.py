@@ -1,6 +1,6 @@
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 from coppercore.model_driven_nn.construction.loader import Loader
 from coppercore.model_driven_nn.network import Network
 
