@@ -1,5 +1,7 @@
+import signal
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Protocol
 
 import numpy as np
@@ -134,6 +136,7 @@ def train(
     log_every=1_000,
     eval_every=10_000,
     make_video_env: Callable | None = None,
+    checkpoint_callback: Callable | None = None,
 ):
     """Train the agent for n_steps environment steps and log everything to WandB."""
 
@@ -150,6 +153,8 @@ def train(
     obs, info = env.reset(seed=seed)
     episode_return, episode_length = 0.0, 0
     best_eval = float("-inf")
+    best_frames = None
+    best_caption = ""
 
     # an env with render_mode="rgb_array", used to record a gif at every evaluation
     if make_video_env is not None:
@@ -157,65 +162,121 @@ def train(
 
         video_env = make_video_env()
 
-    for step in trange(1, n_steps + 1):
-        # choose an action (with exploration)
-        action = agent.act(obs)
+    stop_requested = False
 
-        # environment response
-        next_obs, reward, terminated, truncated, info = env.step(action)
+    def _sigterm_handler(signum, frame):
+        nonlocal stop_requested
+        stop_requested = True
 
-        # agent learns, only terminated is passed, since a truncation is not a terminal state
-        metrics = agent.observe(obs, action, reward, next_obs, terminated)
+    prev_handler = None
+    try:
+        prev_handler = signal.signal(signal.SIGTERM, _sigterm_handler)
+    except (ValueError, AttributeError):
+        pass
 
-        obs = next_obs
-        episode_return += reward
-        episode_length += 1
+    last_completed_step = 0
+    graceful = False
+    try:
+        for step in trange(1, n_steps + 1):
+            if stop_requested:
+                break
 
-        # log episode when it's over (died or timed out)
-        if terminated or truncated:
-            log = {"episode/return": episode_return, "episode/length": episode_length}
+            # choose an action (with exploration)
+            action = agent.act(obs)
 
-            if "score" in info:
-                log["episode/score"] = info["score"]
+            # environment response
+            next_obs, reward, terminated, truncated, info = env.step(action)
 
-            run.log(log, step=step)
-            obs, info = env.reset()
-            episode_return, episode_length = 0.0, 0
+            # agent learns, only terminated is passed, since a truncation is not a terminal state
+            metrics = agent.observe(obs, action, reward, next_obs, terminated)
+            last_completed_step = step
 
-        # log the agent's data (latest value, use smoothing in WandB for noisy curves)
-        if metrics and step % log_every == 0:
-            run.log({f"agent/{k}": v for k, v in metrics.items()}, step=step)
+            obs = next_obs
+            episode_return += reward
+            episode_length += 1
 
-        # evaluate agent occasionally, and keep the best version
-        if step % eval_every == 0 or step == n_steps:
-            result = evaluate(agent, make_env)
-            run.log({f"eval/{k}": v for k, v in result.items()}, step=step)
+            # log episode when it's over (died or timed out)
+            if terminated or truncated:
+                log = {"episode/return": episode_return, "episode/length": episode_length}
 
-            if result["return_mean"] > best_eval:
-                best_eval = result["return_mean"]
-                np.savez(f"{run.dir}/best.npz", **getattr(agent, "params", {}))
-                run.summary["best_eval_return"] = best_eval
+                if "score" in info:
+                    log["episode/score"] = info["score"]
 
-                # record the best agent now, the gif is logged once after training
-                if make_video_env is not None:
-                    best_frames, stats = record_episode(
-                        video_env,
-                        lambda o: agent.act(o, greedy=True),
-                        seed=10_000,
-                        max_frames=5000,
-                    )
-                    best_caption = (
-                        f"step={step} len={stats['length']} "
-                        f"return={stats['return']:.1f}"
-                    )
+                run.log(log, step=step)
+                obs, info = env.reset()
+                episode_return, episode_length = 0.0, 0
 
-    if make_video_env is not None:
-        log_episode_gif(
-            run, best_frames, n_steps, key="eval/best_episode", caption=best_caption
-        )
+            # log the agent's data (latest value, use smoothing in WandB for noisy curves)
+            if metrics and step % log_every == 0:
+                run.log({f"agent/{k}": v for k, v in metrics.items()}, step=step)
 
-    # upload the best weights as a WandB artifact
-    artifact = wandb.Artifact(f"agent-{run.id}", type="model")
-    artifact.add_file(f"{run.dir}/best.npz")
-    run.log_artifact(artifact)
-    run.finish()
+            # evaluate agent occasionally, and keep the best version
+            if step % eval_every == 0 or step == n_steps:
+                result = evaluate(agent, make_env)
+                run.log({f"eval/{k}": v for k, v in result.items()}, step=step)
+
+                if result["return_mean"] > best_eval:
+                    best_eval = result["return_mean"]
+                    np.savez(f"{run.dir}/best.npz", **getattr(agent, "params", {}))
+                    run.summary["best_eval_return"] = best_eval
+
+                    # record the best agent now, the gif is logged once after training
+                    if make_video_env is not None:
+                        best_frames, stats = record_episode(
+                            video_env,
+                            lambda o: agent.act(o, greedy=True),
+                            seed=10_000,
+                            max_frames=5000,
+                        )
+                        best_caption = (
+                            f"step={step} len={stats['length']} "
+                            f"return={stats['return']:.1f}"
+                        )
+
+            if checkpoint_callback is not None:
+                checkpoint_callback(
+                    step=step,
+                    agent=agent,
+                    run=run,
+                    is_final=False,
+                )
+
+            if stop_requested:
+                break
+
+        graceful = True
+    except KeyboardInterrupt:
+        graceful = True
+    finally:
+        if prev_handler is not None:
+            try:
+                signal.signal(signal.SIGTERM, prev_handler)
+            except (ValueError, AttributeError):
+                pass
+
+        try:
+            if graceful and checkpoint_callback is not None and last_completed_step > 0:
+                checkpoint_callback(
+                    step=last_completed_step,
+                    agent=agent,
+                    run=run,
+                    is_final=True,
+                )
+
+            if make_video_env is not None and best_frames is not None:
+                log_episode_gif(
+                    run,
+                    best_frames,
+                    last_completed_step,
+                    key="eval/best_episode",
+                    caption=best_caption,
+                )
+
+            # upload the best weights as a WandB artifact
+            best_path = Path(run.dir) / "best.npz"
+            if best_path.exists():
+                artifact = wandb.Artifact(f"agent-{run.id}", type="model")
+                artifact.add_file(str(best_path))
+                run.log_artifact(artifact)
+        finally:
+            run.finish()

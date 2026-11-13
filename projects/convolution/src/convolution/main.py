@@ -1,7 +1,11 @@
 import argparse
+from pathlib import Path
+import shutil
 from typing import Any
+import uuid
 
 import numpy as np
+import wandb
 from coppercore.backend import get_array_module, is_gpu_available, to_device, to_numpy
 from coppercore.buffer import ReplayBuffer
 from coppercore.dqn.base_agent import BaseAgent
@@ -251,6 +255,95 @@ class DQNAgent(BaseAgent):
         }
 
 
+def save_checkpoint(step_dir: Path, agent: Any) -> None:
+    step_dir.mkdir(parents=True, exist_ok=True)
+    agent.Q_policy.save_model(step_dir / "network")
+    agent.optimizer.save_state(step_dir / "optimizer.npz", agent.Q_policy)
+
+
+def _is_wandb_disabled(run: Any) -> bool:
+    if run is None:
+        return True
+    if getattr(run, "disabled", False) is True:
+        return True
+    settings = getattr(run, "settings", None)
+    if settings is not None:
+        mode = getattr(settings, "mode", None)
+        if isinstance(mode, str) and mode == "disabled":
+            return True
+    mode = getattr(run, "mode", None)
+    if isinstance(mode, str) and mode == "disabled":
+        return True
+    return False
+
+
+def make_checkpoint_callback(
+    checkpoint_interval: int = 25_000,
+    wandb_checkpoint_interval: int = 100_000,
+    checkpoints_dir: Path | str = "checkpoints",
+):
+    base_dir = Path(checkpoints_dir)
+    run_id: str | None = None
+    run_dir: Path | None = None
+    saved_checkpoints: list[Path] = []
+    last_saved_step: int | None = None
+    last_uploaded_step: int | None = None
+
+    def callback(step: int, agent: Any, run: Any = None, is_final: bool = False) -> None:
+        nonlocal run_id, run_dir, last_saved_step, last_uploaded_step
+
+        if run_dir is None:
+            run_id = getattr(run, "id", None) or f"run_{uuid.uuid4().hex[:8]}"
+            run_dir = base_dir / run_id
+
+        local_save_due = (checkpoint_interval > 0 and step % checkpoint_interval == 0) or is_final
+        wandb_enabled = not _is_wandb_disabled(run) and hasattr(run, "log_artifact")
+        wandb_upload_due = (
+            ((wandb_checkpoint_interval > 0 and step % wandb_checkpoint_interval == 0) or is_final)
+            and wandb_enabled
+        )
+
+        if not local_save_due and not wandb_upload_due:
+            return
+
+        step_dir = run_dir / f"step_{step}"
+
+        # Save locally if not already saved for this step
+        if step != last_saved_step:
+            save_checkpoint(step_dir, agent)
+            last_saved_step = step
+            if step_dir not in saved_checkpoints:
+                saved_checkpoints.append(step_dir)
+
+        # Upload to W&B if due and not already uploaded for this step
+        if wandb_upload_due and step != last_uploaded_step:
+            artifact = wandb.Artifact(
+                name="snake-dqn-checkpoint",
+                type="model",
+                metadata={
+                    "step": step,
+                    "epsilon": getattr(agent, "epsilon", 0.0),
+                },
+            )
+            artifact.add_dir(str(step_dir))
+            logged_artifact = run.log_artifact(artifact)
+            artifact_to_wait = logged_artifact if logged_artifact is not None else artifact
+            if hasattr(artifact_to_wait, "wait") and callable(artifact_to_wait.wait):
+                try:
+                    artifact_to_wait.wait()
+                except Exception:
+                    pass
+            last_uploaded_step = step
+
+        # Retention: keep only the two most recent local checkpoints for this run
+        while len(saved_checkpoints) > 2:
+            oldest_dir = saved_checkpoints.pop(0)
+            if oldest_dir.exists() and oldest_dir != step_dir:
+                shutil.rmtree(oldest_dir, ignore_errors=True)
+
+    return callback
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Snake Convolutional DQN Training")
     parser.add_argument(
@@ -295,6 +388,18 @@ def parse_args():
         default=0xC0FFEE,
         help="Random seed.",
     )
+    parser.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=25_000,
+        help="Local checkpoint interval in steps (0 to disable).",
+    )
+    parser.add_argument(
+        "--wandb-checkpoint-interval",
+        type=int,
+        default=100_000,
+        help="W&B artifact checkpoint interval in steps (0 to disable).",
+    )
     return parser.parse_args()
 
 
@@ -311,6 +416,11 @@ if __name__ == "__main__":
         dtype=selected_dtype,
         batch_size=args.batch_size,
         name=args.name,
+    )
+
+    checkpoint_callback = make_checkpoint_callback(
+        checkpoint_interval=args.checkpoint_interval,
+        wandb_checkpoint_interval=args.wandb_checkpoint_interval,
     )
 
     train(
@@ -334,4 +444,5 @@ if __name__ == "__main__":
             obs_mode="board",
             movement_rule=True,
         ),
+        checkpoint_callback=checkpoint_callback,
     )

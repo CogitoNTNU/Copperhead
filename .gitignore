@@ -256,3 +256,5 @@ Thumbs.db
 wandb/
 
 *.svg
+
+checkpoints/
