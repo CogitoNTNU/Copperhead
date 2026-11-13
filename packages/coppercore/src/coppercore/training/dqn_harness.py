@@ -2,7 +2,7 @@ import signal
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 from tqdm import trange
@@ -138,16 +138,31 @@ def train(
     eval_every=10_000,
     make_video_env: Callable | None = None,
     checkpoint_callback: Callable | None = None,
+    start_step: int = 0,
+    run_id: str | None = None,
+    resume: str | None = None,
+    fork_from: str | None = None,
+    use_artifact: Any | None = None,
 ):
     """Train the agent for n_steps environment steps and log everything to WandB."""
 
-    run = wandb.init(
-        project="copperhead-rl",
-        entity="Copperhead",
-        group=group,  # seeds of the same setup, like "dqn-cartpole"
-        name=name,
-        config={"seed": seed, "n_steps": n_steps, **(config or {})},
-    )
+    init_kwargs = {
+        "project": "copperhead-rl",
+        "entity": "Copperhead",
+        "group": group,  # seeds of the same setup, like "dqn-cartpole"
+        "name": name,
+        "config": {"seed": seed, "n_steps": n_steps, **(config or {})},
+    }
+    if run_id is not None:
+        init_kwargs["id"] = run_id
+    if resume is not None:
+        init_kwargs["resume"] = resume
+    if fork_from is not None:
+        init_kwargs["fork_from"] = fork_from
+
+    run = wandb.init(**init_kwargs)
+    if use_artifact is not None:
+        run.use_artifact(use_artifact)
 
     # the training env, only the first reset is seeded
     env = make_env()
@@ -175,10 +190,10 @@ def train(
     except (ValueError, AttributeError):
         pass
 
-    last_completed_step = 0
+    last_completed_step = start_step
     graceful = False
     try:
-        for step in trange(1, n_steps + 1):
+        for step in trange(start_step + 1, n_steps + 1):
             if stop_requested:
                 break
 
@@ -259,7 +274,11 @@ def train(
                 pass
 
         try:
-            if graceful and checkpoint_callback is not None and last_completed_step > 0:
+            if (
+                graceful
+                and checkpoint_callback is not None
+                and last_completed_step > start_step
+            ):
                 checkpoint_callback(
                     step=last_completed_step,
                     agent=agent,

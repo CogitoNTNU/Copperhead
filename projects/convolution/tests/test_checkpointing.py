@@ -5,8 +5,11 @@ import numpy as np
 import pytest
 from convolution.main import (
     DQNAgent,
+    main,
     make_checkpoint_callback,
     make_snake_env,
+    parse_args,
+    restore_checkpoint,
     save_checkpoint,
 )
 from coppercore.model_driven_nn.network import Network
@@ -457,3 +460,375 @@ def test_parse_args_custom_intervals():
         args = parse_args()
         assert args.checkpoint_interval == 50000
         assert args.wandb_checkpoint_interval == 200000
+
+
+def test_parse_args_resume_options():
+    # Local resume
+    args = parse_args(["--resume-local", "checkpoints/run1/step_25000"])
+    assert args.resume_local == "checkpoints/run1/step_25000"
+    assert args.resume_wandb is None
+    assert args.wandb_mode is None
+
+    # W&B resume default mode
+    args = parse_args(["--resume-wandb", "entity/proj/art:v1"])
+    assert args.resume_wandb == "entity/proj/art:v1"
+    assert args.resume_local is None
+    assert args.wandb_mode is None
+
+    # W&B resume fork mode
+    args = parse_args(["--resume-wandb", "entity/proj/art:v1", "--wandb-mode", "fork"])
+    assert args.wandb_mode == "fork"
+
+    # W&B resume continue mode
+    args = parse_args(
+        ["--resume-wandb", "entity/proj/art:v1", "--wandb-mode", "continue"]
+    )
+    assert args.wandb_mode == "continue"
+
+    # Mutually exclusive sources
+    with pytest.raises(SystemExit):
+        parse_args(
+            [
+                "--resume-local",
+                "checkpoints/run1/step_25000",
+                "--resume-wandb",
+                "entity/proj/art:v1",
+            ]
+        )
+
+    # wandb-mode without resume-wandb
+    with pytest.raises(SystemExit):
+        parse_args(["--wandb-mode", "fork"])
+
+    with pytest.raises(SystemExit):
+        parse_args(
+            [
+                "--resume-local",
+                "checkpoints/run1/step_25000",
+                "--wandb-mode",
+                "fork",
+            ]
+        )
+
+
+def test_restore_checkpoint_network_and_optimizer(tmp_path, dummy_agent):
+    # Train dummy agent with one step of mock gradients to set optimizer moments
+    for p in dummy_agent.Q_policy.params():
+        p.grad = np.ones_like(p.data) * 0.05
+    dummy_agent.optimizer.step()
+
+    step_dir = tmp_path / "step_50000"
+    save_checkpoint(step_dir, dummy_agent)
+
+    # Create new agent with modified weights
+    env = make_snake_env()
+    new_agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        seed=123,
+        device="cpu",
+        dtype=np.float32,
+    )
+    for p in new_agent.Q_policy.params():
+        p.data += 5.0
+    new_agent.network_update()
+
+    restore_checkpoint(new_agent, step_dir)
+
+    # 1. Verify policy network weights match
+    for p_orig, p_restored in zip(
+        dummy_agent.Q_policy.params(), new_agent.Q_policy.params()
+    ):
+        assert np.allclose(p_orig.data, p_restored.data)
+
+    # 2. Verify target network initialized from restored policy network
+    for p_target, p_policy in zip(
+        new_agent.Q_target.params(), new_agent.Q_policy.params()
+    ):
+        assert np.allclose(p_target.data, p_policy.data)
+
+    # 3. Verify optimizer references the restored policy network parameters
+    assert [id(p) for p in new_agent.optimizer.parameters] == [
+        id(p) for p in new_agent.Q_policy.params()
+    ]
+
+    # 4. Verify optimizer state matches
+    orig_state = dummy_agent.optimizer.state_dict(dummy_agent.Q_policy)
+    restored_state = new_agent.optimizer.state_dict(new_agent.Q_policy)
+    assert orig_state["time_step"] == restored_state["time_step"]
+    assert orig_state["state"].keys() == restored_state["state"].keys()
+    for k in orig_state["state"]:
+        assert np.allclose(
+            orig_state["state"][k]["moment_1"], restored_state["state"][k]["moment_1"]
+        )
+        assert np.allclose(
+            orig_state["state"][k]["moment_2"], restored_state["state"][k]["moment_2"]
+        )
+
+    # 5. Verify device and dtype preserved
+    assert new_agent.Q_policy.params()[0].data.dtype == np.float32
+    assert new_agent.device == "cpu"
+
+
+def test_resume_local_checkpoint(tmp_path, dummy_agent):
+    step_dir = tmp_path / "step_25000"
+    save_checkpoint(step_dir, dummy_agent)
+
+    with patch("convolution.main.train") as mock_train:
+        main(["--resume-local", str(step_dir), "--n-steps", "30000"])
+
+        assert mock_train.call_count == 1
+        _, kwargs = mock_train.call_args
+        assert kwargs["start_step"] == 25000
+        assert kwargs["n_steps"] == 30000
+        assert kwargs["run_id"] is None
+        assert kwargs["resume"] is None
+        assert kwargs["fork_from"] is None
+
+        # Verify agent steps counter was updated
+        agent = mock_train.call_args[0][0]
+        assert agent.steps == 25000
+
+
+def test_resume_wandb_continue_mode(tmp_path, dummy_agent):
+    ckpt_dir = tmp_path / "wandb_download"
+    save_checkpoint(ckpt_dir, dummy_agent)
+
+    mock_artifact = MagicMock()
+    mock_artifact.download.return_value = str(ckpt_dir)
+    mock_artifact.metadata = {"step": 40000, "_step": 150}
+    mock_artifact.logged_by.return_value = MagicMock(id="original-run-abc")
+
+    mock_api = MagicMock()
+    mock_api.artifact.return_value = mock_artifact
+
+    with (
+        patch("convolution.main.wandb.Api", return_value=mock_api),
+        patch("convolution.main.train") as mock_train,
+    ):
+        main(
+            [
+                "--resume-wandb",
+                "entity/proj/artifact:v1",
+                "--wandb-mode",
+                "continue",
+                "--n-steps",
+                "50000",
+            ]
+        )
+
+        mock_api.artifact.assert_called_once_with("entity/proj/artifact:v1")
+        mock_artifact.download.assert_called_once()
+
+        assert mock_train.call_count == 1
+        _, kwargs = mock_train.call_args
+        assert kwargs["start_step"] == 40000
+        assert kwargs["n_steps"] == 50000
+        assert kwargs["run_id"] == "original-run-abc"
+        assert kwargs["resume"] == "must"
+        assert kwargs["fork_from"] is None
+        assert kwargs["use_artifact"] == mock_artifact
+
+        agent = mock_train.call_args[0][0]
+        assert agent.steps == 40000
+
+
+def test_resume_wandb_fork_mode(tmp_path, dummy_agent):
+    ckpt_dir = tmp_path / "wandb_download"
+    save_checkpoint(ckpt_dir, dummy_agent)
+
+    mock_artifact = MagicMock()
+    mock_artifact.download.return_value = str(ckpt_dir)
+    mock_artifact.metadata = {"step": 40000, "_step": 150}
+    mock_artifact.logged_by.return_value = MagicMock(id="original-run-abc")
+
+    mock_api = MagicMock()
+    mock_api.artifact.return_value = mock_artifact
+
+    with (
+        patch("convolution.main.wandb.Api", return_value=mock_api),
+        patch("convolution.main.train") as mock_train,
+    ):
+        main(
+            [
+                "--resume-wandb",
+                "entity/proj/artifact:v1",
+                "--wandb-mode",
+                "fork",
+                "--n-steps",
+                "50000",
+            ]
+        )
+
+        assert mock_train.call_count == 1
+        _, kwargs = mock_train.call_args
+        assert kwargs["start_step"] == 40000
+        assert kwargs["n_steps"] == 50000
+        assert kwargs["run_id"] is None
+        assert kwargs["resume"] is None
+        assert kwargs["fork_from"] == "original-run-abc?_step=150"
+        assert kwargs["use_artifact"] == mock_artifact
+
+        agent = mock_train.call_args[0][0]
+        assert agent.steps == 40000
+
+
+def test_training_step_progression_on_resume(dummy_agent):
+    mock_run = MagicMock()
+    mock_run.id = "progress-run"
+    mock_run.dir = "/tmp"
+    mock_run.summary = {}
+
+    logged_steps = []
+    received_callback_steps = []
+
+    def mock_log(data, step=None):
+        logged_steps.append(step)
+
+    mock_run.log = mock_log
+
+    def mock_cb(step, agent, run, is_final=False):
+        received_callback_steps.append((step, is_final))
+
+    with patch("coppercore.training.dqn_harness.wandb.init", return_value=mock_run):
+        train(
+            dummy_agent,
+            make_env=make_snake_env,
+            start_step=100,
+            n_steps=103,
+            checkpoint_callback=mock_cb,
+            eval_every=1000,
+            log_every=1,
+        )
+
+    # Check that loop only executed steps 101, 102, 103
+    callback_steps = [s for s, is_final in received_callback_steps if not is_final]
+    assert callback_steps == [101, 102, 103]
+    # Final callback should be at step 103
+    final_callbacks = [s for s, is_final in received_callback_steps if is_final]
+    assert final_callbacks == [103]
+
+
+def test_restore_checkpoint_does_not_perform_gradient_descent(tmp_path, dummy_agent):
+    step_dir = tmp_path / "step_10000"
+    save_checkpoint(step_dir, dummy_agent)
+
+    env = make_snake_env()
+    new_agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        seed=999,
+        device="cpu",
+        dtype=np.float32,
+    )
+
+    with patch.object(new_agent.optimizer, "step") as mock_step:
+        restore_checkpoint(new_agent, step_dir)
+        # Verify optimizer.step() was not called
+        assert mock_step.call_count == 0
+
+    # Verify target parameters match restored policy parameters exactly
+    for p_target, p_policy in zip(
+        new_agent.Q_target.params(), new_agent.Q_policy.params()
+    ):
+        assert np.allclose(p_target.data, p_policy.data)
+
+
+def test_resumed_training_with_empty_replay_buffer(tmp_path):
+    env = make_snake_env()
+    agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        seed=42,
+        device="cpu",
+        dtype=np.float32,
+        batch_size=4,
+        n_train_start=20_000,
+        train_freq=4,
+    )
+    # Simulate restored agent at step 100,000 with empty replay buffer
+    agent.steps = 100_000
+    assert len(agent.replay_buffer) == 0
+
+    mock_run = MagicMock()
+    mock_run.id = "resume-buf-run"
+    mock_run.dir = str(tmp_path / "wandb_dir")
+    os.makedirs(mock_run.dir, exist_ok=True)
+    mock_run.summary = {}
+
+    with patch("coppercore.training.dqn_harness.wandb.init", return_value=mock_run):
+        train(
+            agent,
+            make_env=make_snake_env,
+            start_step=100_000,
+            n_steps=100_008,
+            eval_every=1000,
+            log_every=1,
+        )
+
+    # Agent should have executed 8 steps
+    assert agent.steps == 100_008
+    assert len(agent.replay_buffer) == 8
+    # Epsilon should follow the 100_008 global step schedule, not reset to step 8
+    expected_eps = agent.max_epsilon + min(1.0, 100_008 / agent.eps_decay_steps) * (
+        agent.min_epsilon - agent.max_epsilon
+    )
+    assert np.isclose(agent.epsilon, expected_eps)
+
+
+def test_fresh_training_warmup_behavior():
+    env = make_snake_env()
+    agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        seed=42,
+        device="cpu",
+        dtype=np.float32,
+        batch_size=4,
+        n_train_start=20_000,
+        train_freq=4,
+    )
+    obs, _ = env.reset()
+    action = 0
+    next_obs, reward, terminated, _, _ = env.step(action)
+
+    # In fresh training before reaching n_train_start, observe returns None
+    for _ in range(8):
+        metrics = agent.observe(obs, action, reward, next_obs, terminated)
+        assert metrics is None
+
+
+def test_wandb_use_artifact_called_in_train():
+    env = make_snake_env()
+    agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        seed=42,
+        device="cpu",
+        dtype=np.float32,
+        batch_size=4,
+    )
+
+    mock_run = MagicMock()
+    mock_run.id = "artifact-test-run"
+    mock_run.dir = "/tmp"
+    mock_run.summary = {}
+
+    mock_artifact = MagicMock()
+
+    with patch("coppercore.training.dqn_harness.wandb.init", return_value=mock_run):
+        train(
+            agent,
+            make_env=make_snake_env,
+            start_step=0,
+            n_steps=2,
+            use_artifact=mock_artifact,
+            eval_every=1000,
+        )
+
+    mock_run.use_artifact.assert_called_once_with(mock_artifact)

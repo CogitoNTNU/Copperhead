@@ -258,5 +258,6 @@ wandb/
 *.svg
 
 checkpoints/
+artifacts/
 
 .junie/

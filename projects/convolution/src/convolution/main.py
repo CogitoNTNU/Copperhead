@@ -1,4 +1,5 @@
 import argparse
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -217,7 +218,11 @@ class DQNAgent(BaseAgent):
         self.replay_buffer.add(obs, action, reward, next_obs, terminated)
         self.steps += 1
 
-        if len(self.replay_buffer) < self.n_train_start or self.steps % self.train_freq:
+        if (
+            self.steps < self.n_train_start
+            or len(self.replay_buffer) < self.batch_size * 100
+            or self.steps % self.train_freq
+        ):
             return None
 
         loss = dqn_update(
@@ -245,6 +250,31 @@ def save_checkpoint(step_dir: Path, agent: Any) -> None:
     step_dir.mkdir(parents=True, exist_ok=True)
     agent.Q_policy.save_model(step_dir / "network")
     agent.optimizer.save_state(step_dir / "optimizer.npz", agent.Q_policy)
+
+
+def _extract_step_from_path(path: Path | str) -> int:
+    match = re.search(r"step_(\d+)", str(path))
+    if match:
+        return int(match.group(1))
+    return 0
+
+
+def restore_checkpoint(agent: DQNAgent, checkpoint_dir: Path | str) -> None:
+    checkpoint_path = Path(checkpoint_dir)
+    network_dir = checkpoint_path / "network"
+    if not network_dir.exists() and (checkpoint_path / "manifest.json").exists():
+        network_dir = checkpoint_path
+
+    agent.Q_policy = Network.load_model(
+        network_dir,
+        device=agent.device,
+        dtype=agent.dtype,
+    )
+    agent.optimizer.parameters = agent.Q_policy.params()
+    optimizer_path = checkpoint_path / "optimizer.npz"
+    agent.optimizer.load_state(optimizer_path, agent.Q_policy)
+    agent.optimizer.to(device=agent.device, dtype=agent.dtype)
+    agent.network_update()
 
 
 def _is_wandb_disabled(run: Any) -> bool:
@@ -312,6 +342,7 @@ def make_checkpoint_callback(
                 type="model",
                 metadata={
                     "step": step,
+                    "_step": run.step,
                     "epsilon": getattr(agent, "epsilon", 0.0),
                 },
             )
@@ -336,7 +367,7 @@ def make_checkpoint_callback(
     return callback
 
 
-def parse_args():
+def parse_args(args: list[str] | None = None):
     parser = argparse.ArgumentParser(description="Snake Convolutional DQN Training")
     parser.add_argument(
         "--name",
@@ -392,11 +423,40 @@ def parse_args():
         default=100_000,
         help="W&B artifact checkpoint interval in steps (0 to disable).",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--resume-local",
+        type=str,
+        default=None,
+        help="Path to local checkpoint directory to resume from.",
+    )
+    parser.add_argument(
+        "--resume-wandb",
+        type=str,
+        default=None,
+        help="W&B artifact reference to resume from.",
+    )
+    parser.add_argument(
+        "--wandb-mode",
+        choices=["continue", "fork"],
+        default=None,
+        help="W&B resumption mode (continue or fork). Only applicable with --resume-wandb.",
+    )
+    parsed = parser.parse_args(args)
+    if parsed.resume_local and parsed.resume_wandb:
+        parser.error("--resume-local and --resume-wandb are mutually exclusive.")
+    if parsed.wandb_mode is not None and not parsed.resume_wandb:
+        parser.error(
+            "--wandb-mode is only applicable when resuming from W&B (--resume-wandb)."
+        )
+    return parsed
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def main(args=None):
+    if args is None:
+        args = parse_args()
+    elif isinstance(args, list):
+        args = parse_args(args)
+
     selected_dtype = np.float32 if args.dtype == "float32" else np.float64
     env = make_snake_env()
     dqn_agent = DQNAgent(
@@ -409,6 +469,39 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         name=args.name,
     )
+
+    start_step = 0
+    run_id: str | None = None
+    resume: str | None = None
+    fork_from: str | None = None
+    use_artifact: Any | None = None
+
+    if args.resume_local:
+        checkpoint_dir = Path(args.resume_local)
+        restore_checkpoint(dqn_agent, checkpoint_dir)
+        start_step = _extract_step_from_path(checkpoint_dir)
+        dqn_agent.steps = start_step
+    elif args.resume_wandb:
+        api = wandb.Api()
+        artifact = api.artifact(args.resume_wandb)
+        download_dir = artifact.download()
+        checkpoint_dir = Path(download_dir)
+        restore_checkpoint(dqn_agent, checkpoint_dir)
+
+        metadata = artifact.metadata or {}
+        start_step = int(metadata.get("step", _extract_step_from_path(checkpoint_dir)))
+        dqn_agent.steps = start_step
+
+        orig_run_id = artifact.logged_by().id
+        use_artifact = artifact
+
+        wandb_mode = args.wandb_mode or "continue"
+        if wandb_mode == "continue":
+            run_id = orig_run_id
+            resume = "must"
+        elif wandb_mode == "fork":
+            fork_step = artifact.metadata["_step"]
+            fork_from = f"{orig_run_id}?_step={fork_step}"
 
     checkpoint_callback = make_checkpoint_callback(
         checkpoint_interval=args.checkpoint_interval,
@@ -437,4 +530,13 @@ if __name__ == "__main__":
             movement_rule=True,
         ),
         checkpoint_callback=checkpoint_callback,
+        start_step=start_step,
+        run_id=run_id,
+        resume=resume,
+        fork_from=fork_from,
+        use_artifact=use_artifact,
     )
+
+
+if __name__ == "__main__":
+    main()
