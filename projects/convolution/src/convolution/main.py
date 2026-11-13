@@ -338,12 +338,13 @@ def make_checkpoint_callback(
         # Upload to W&B if due and not already uploaded for this step
         if wandb_upload_due and step != last_uploaded_step:
             artifact = wandb.Artifact(
-                name="snake-dqn-checkpoint",
+                name=f"snake-dqn-{run.id}",
                 type="model",
                 metadata={
+                    "run_id": run.id,
                     "step": step,
                     "_step": run.step,
-                    "epsilon": getattr(agent, "epsilon", 0.0),
+                    "epsilon": agent.epsilon,
                 },
             )
             artifact.add_dir(str(step_dir))
