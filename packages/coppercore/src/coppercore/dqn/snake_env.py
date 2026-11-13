@@ -245,7 +245,7 @@ class SnakeEnv:
     def obs_shape(self) -> tuple[int, ...]:
         """Shape of the observation array returned by observe()."""
         if self.obs_mode == "board":
-            return (3, self.height + 2, self.width + 2)
+            return (4, self.height + 2, self.width + 2)
         elif self.obs_mode == "state":
             return (1,)
         return (self.obs_dim,)
@@ -254,7 +254,7 @@ class SnakeEnv:
     def obs_dim(self) -> int:
         """Length of the vector returned by get_obs, or total elements if multidimensional."""
         if self.obs_mode == "board":
-            return 3 * (self.height + 2) * (self.width + 2)
+            return 4 * (self.height + 2) * (self.width + 2)
         window_size = (2 * self.obs_window_radius + 1) ** 2
 
         # danger and apple windows, apple and snake direction, area and tail per action, length
@@ -262,31 +262,43 @@ class SnakeEnv:
 
     def get_board_obs(self) -> npt.NDArray[np.float32]:
         """
-        Full board representation of shape (3, height + 2, width + 2) padded with walls:
+        Full board representation of shape (4, height + 2, width + 2) padded with walls:
         - channel 0: snake head (1.0 at head, 0.0 elsewhere, padded with 0.0)
-        - channel 1: snake body / danger gradient based on time until tile is free
-                     (1.0 at head, decaying to 1/length at tail, 1.0 at wall padding, 0.0 elsewhere)
+        - channel 1: occupancy (1.0 at every snake segment and padded walls, 0.0 at empty tiles and apple)
         - channel 2: apple (1.0 at apple, 0.0 elsewhere, padded with 0.0)
+        - channel 3: reversed logarithmic body gradient (0.0 at head, increasing to 1.0 at tail, 0.0 elsewhere)
         """
         head = (self.board.tiles == Tile.HEAD).astype(np.float32)
+        occupancy = (
+            (self.board.tiles == Tile.HEAD) | (self.board.tiles == Tile.BODY)
+        ).astype(np.float32)
         apple = (self.board.tiles == Tile.APPLE).astype(np.float32)
 
-        # Danger / body gradient: body part i leaves its tile after length - i steps
         body_coords = np.array(self.board.body)
         length = len(body_coords)
-        danger = np.zeros(self.board.tiles.shape, dtype=np.float32)
-        danger[body_coords[:, 0], body_coords[:, 1]] = (
-            (length - np.arange(length)) / length
-        ).astype(np.float32)
+        gradient = np.zeros(self.board.tiles.shape, dtype=np.float32)
 
-        # Pad the board with a layer of always-taken spots (walls):
-        # - Head and Apple channels are padded with 0.0
-        # - Danger / body channel is padded with 1.0 (walls are permanently occupied / lethal)
+        if length > 1:
+            time_to_free = length - np.arange(length)
+            gradient = 1.0 - np.log(time_to_free) / np.log(self.width * self.height)
+        else:
+            values = np.zeros(length)
+
+        if length > 0:
+            gradient[body_coords[:, 0], body_coords[:, 1]] = values.astype(np.float32)
+
+        # Pad the board with a layer of walls:
+        # - Head, Apple, and Gradient channels are padded with 0.0
+        # - Occupancy channel is padded with 1.0 (walls are permanently occupied / lethal)
         head_padded = np.pad(head, pad_width=1, constant_values=0.0)
-        danger_padded = np.pad(danger, pad_width=1, constant_values=1.0)
+        occupancy_padded = np.pad(occupancy, pad_width=1, constant_values=1.0)
         apple_padded = np.pad(apple, pad_width=1, constant_values=0.0)
+        gradient_padded = np.pad(gradient, pad_width=1, constant_values=0.0)
 
-        return np.stack([head_padded, danger_padded, apple_padded], axis=0)
+        return np.stack(
+            [head_padded, occupancy_padded, apple_padded, gradient_padded],
+            axis=0,
+        ).astype(np.float32)
 
     def get_obs(self) -> npt.NDArray:
         """

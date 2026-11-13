@@ -97,7 +97,7 @@ class DQNAgent(BaseAgent):
             elif obs_dim is not None:
                 obs_shape = (obs_dim,)
             else:
-                obs_shape = (3, 10, 10)
+                obs_shape = (4, 22, 22)
 
         self.obs_shape = obs_shape
         self.replay_buffer = ReplayBuffer(

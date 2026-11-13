@@ -182,35 +182,133 @@ def test_board_observation_gradient_and_wall_padding():
     env = SnakeEnv(width=8, height=6, seed=42, obs_mode="board")
     obs, info = env.reset()
 
-    # Board shape with padding should be (3, height + 2, width + 2)
-    assert obs.shape == (3, 8, 10)
-    assert env.obs_shape == (3, 8, 10)
-    assert env.obs_dim == 3 * 8 * 10
+    # Board shape with padding should be (4, height + 2, width + 2)
+    assert obs.shape == (4, 8, 10)
+    assert env.obs_shape == (4, 8, 10)
+    assert env.obs_dim == 4 * 8 * 10
+    assert obs.dtype == np.float32
 
     # Channel 0: Head
     head_channel = obs[0]
     assert head_channel.sum() == 1.0
     head_y, head_x = env.board.head
     assert head_channel[head_y + 1, head_x + 1] == 1.0
+    # Wall padding is 0.0
+    assert np.all(head_channel[0, :] == 0.0)
+    assert np.all(head_channel[-1, :] == 0.0)
+    assert np.all(head_channel[:, 0] == 0.0)
+    assert np.all(head_channel[:, -1] == 0.0)
 
-    # Channel 1: Danger/body gradient + wall padding
-    danger_channel = obs[1]
+    # Channel 1: Occupancy (1.0 at snake body + walls, 0.0 at empty and apple)
+    occupancy_channel = obs[1]
     # Check 1-layer wall perimeter is 1.0
-    assert np.all(danger_channel[0, :] == 1.0)
-    assert np.all(danger_channel[-1, :] == 1.0)
-    assert np.all(danger_channel[:, 0] == 1.0)
-    assert np.all(danger_channel[:, -1] == 1.0)
+    assert np.all(occupancy_channel[0, :] == 1.0)
+    assert np.all(occupancy_channel[-1, :] == 1.0)
+    assert np.all(occupancy_channel[:, 0] == 1.0)
+    assert np.all(occupancy_channel[:, -1] == 1.0)
 
-    # Check snake gradient from head (1.0) down to tail (1/length)
+    # Every snake segment has occupancy 1.0
     body = list(env.board.body)
-    length = len(body)
-    for i, (by, bx) in enumerate(body):
-        expected_val = (length - i) / length
-        actual_val = danger_channel[by + 1, bx + 1]
-        assert np.isclose(actual_val, expected_val)
+    for by, bx in body:
+        assert occupancy_channel[by + 1, bx + 1] == 1.0
+
+    # Empty tiles and apple have occupancy 0.0
+    for y in range(env.height):
+        for x in range(env.width):
+            if (y, x) not in env.board.body:
+                assert occupancy_channel[y + 1, x + 1] == 0.0
 
     # Channel 2: Apple
     apple_channel = obs[2]
     assert apple_channel.sum() == 1.0
     apple_coords = np.argwhere(env.board.tiles == Tile.APPLE)[0]
     assert apple_channel[apple_coords[0] + 1, apple_coords[1] + 1] == 1.0
+    # Walls are 0.0
+    assert np.all(apple_channel[0, :] == 0.0)
+    assert np.all(apple_channel[-1, :] == 0.0)
+    assert np.all(apple_channel[:, 0] == 0.0)
+    assert np.all(apple_channel[:, -1] == 0.0)
+
+    # Channel 3: Reversed logarithmic body gradient
+    gradient_channel = obs[3]
+    # Walls are 0.0
+    assert np.all(gradient_channel[0, :] == 0.0)
+    assert np.all(gradient_channel[-1, :] == 0.0)
+    assert np.all(gradient_channel[:, 0] == 0.0)
+    assert np.all(gradient_channel[:, -1] == 0.0)
+
+    # Empty tiles are 0.0
+    for y in range(env.height):
+        for x in range(env.width):
+            if (y, x) not in env.board.body:
+                assert gradient_channel[y + 1, x + 1] == 0.0
+
+    # 0.0 at head and 1.0 at tail
+    head_y, head_x = body[0]
+    tail_y, tail_x = body[-1]
+    assert gradient_channel[head_y + 1, head_x + 1] == 0.0
+    assert gradient_channel[tail_y + 1, tail_x + 1] == 1.0
+
+    # Monotonically increasing from head to tail and bounded in [0.0, 1.0]
+    length = len(body)
+    body_vals = [gradient_channel[by + 1, bx + 1] for by, bx in body]
+    assert all(body_vals[i] <= body_vals[i + 1] for i in range(len(body_vals) - 1))
+    assert np.all(gradient_channel >= 0.0)
+    assert np.all(gradient_channel <= 1.0)
+
+    # Values match formula
+    for i, (by, bx) in enumerate(body):
+        expected_val = 1.0 - np.log(length - i) / np.log(length)
+        assert np.isclose(gradient_channel[by + 1, bx + 1], expected_val, atol=1e-6)
+
+
+def test_single_segment_snake_observation():
+    env = SnakeEnv(width=8, height=6, seed=42, obs_mode="board")
+    env.snake_length = 1
+    obs, info = env.reset()
+
+    assert obs.shape == (4, 8, 10)
+    assert obs.dtype == np.float32
+    assert np.all(np.isfinite(obs))
+
+    head_y, head_x = env.board.head
+    assert obs[0, head_y + 1, head_x + 1] == 1.0
+    assert obs[1, head_y + 1, head_x + 1] == 1.0
+    assert obs[3, head_y + 1, head_x + 1] == 0.0
+
+
+def test_convolutional_dqn_forward_pass_with_new_shape():
+    import sys
+    from pathlib import Path
+
+    conv_src = Path(__file__).resolve().parents[3] / "projects" / "convolution" / "src"
+    if str(conv_src) not in sys.path:
+        sys.path.insert(0, str(conv_src))
+
+    from convolution.main import DQNAgent, make_snake_env
+
+    env = make_snake_env()
+    assert env.obs_shape == (4, 22, 22)
+
+    agent = DQNAgent(
+        n_states=env.n_states,
+        n_actions=env.n_actions,
+        obs_shape=env.obs_shape,
+        seed=42,
+        device="cpu",
+        dtype=np.float32,
+    )
+
+    obs, _ = env.reset(seed=42)
+    assert obs.shape == (4, 22, 22)
+
+    # Single greedy act forward pass
+    action = agent.act(obs, greedy=True)
+    assert isinstance(action, int)
+    assert 0 <= action < env.n_actions
+
+    # Batched forward pass
+    batch_obs = np.stack([obs, obs, obs])
+    actions = agent.act_batch(batch_obs, greedy=True)
+    assert actions.shape == (3,)
+    assert all(0 <= a < env.n_actions for a in actions)
